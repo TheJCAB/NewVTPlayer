@@ -1,0 +1,17 @@
+{
+    "liveServer.settings.port": 4500,
+    "liveServer.settings.root": "/www",
+    "liveServer.settings.CustomBrowser": "chrome:PrivateMode",
+    "liveServer.settings.ChromeDebuggingAttachment": true,
+    "liveServer.settings.NoBrowser" : false,
+    "liveServer.settings.ignoreFiles" : [
+            ".cmake/**",
+            "CMakeFiles/**",
+            "*Cmake*",
+            "*ninja*"
+    ],
+    "liveServer.settings.mount": [
+        ["/js", "./js"],
+        ["/js/bin", ".//build/WASM-Debug-EM/bin"]
+    ],
+}

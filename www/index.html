@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Simple template</title>
+  </head>
+  <body>
+    <script src="js/main.js" type="application/javascript"></script>
+
+    <button id="start-button">Start audio</button>
+
+    <script>
+      var buttonEl;
+
+      const onClickButton = async () => {
+        buttonEl.disabled = true;
+        var audioContext = new AudioContext();
+        await startAudio(audioContext);
+        audioContext.resume();
+        buttonEl.textContent = 'Playing...';
+        console.log('Audio started');
+      };
+
+      // A simple onLoad handler. It also handles user gesture to unlock the audio
+      // playback.
+      window.addEventListener('load', async () => {
+        buttonEl = document.getElementById('start-button');
+        buttonEl.disabled = false;
+        buttonEl.addEventListener('click', onClickButton, false);
+      });
+
+      //const startButton = document.getElementById('start-button');
+      //startButton.addEventListener('click', startAudioContext);
+
+/*
+      // Create an audio source node and configure it to receive audio data from the worker thread
+      const audioSourceNode = audioContext.createBufferSource();
+      const audioWorkletNode = audioContext.createScriptProcessor(1024, 2, 2);
+
+      // Set up the audio buffers
+      const inputBuffer = new Float32Array(scriptProcessorNode.bufferSize);
+      const outputBuffer = new Float32Array(scriptProcessorNode.bufferSize);
+
+      // Set up the script processor node to receive audio data from the worker thread
+      scriptProcessorNode.onaudioprocess = function(event) {
+        // Copy the audio data from the input buffer to the output buffer
+        event.outputBuffer.getChannelData(0).set(inputBuffer.subarray(0, event.outputBuffer.length));
+        event.outputBuffer.getChannelData(1).set(inputBuffer.subarray(event.outputBuffer.length, event.outputBuffer.length * 2));
+      };
+
+      // Connect the audio nodes
+      audioSourceNode.connect(scriptProcessorNode);
+      scriptProcessorNode.connect(audioContext.destination);
+
+      // Start the audio
+      audioSourceNode.start();
+
+      // Send a message to the worker thread to start generating audio
+      worker.postMessage({
+        type: 'start',
+        sampleRate: audioContext.sampleRate
+      });
+
+      //WebAssembly.instantiateStreaming(
+      //  fetch('calc.wasm'),
+      //).then(result => {
+      //  const add = result.instance.exports.add;
+      //  const sub = result.instance.exports.sub;
+      //  console.log(add(1,2));
+      //  console.log(sub(2,1));
+      //});
+*/
+    </script>
+  </body>
+</html>
