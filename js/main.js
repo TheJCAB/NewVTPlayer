@@ -1,14 +1,20 @@
 
 window.startAudio = async (audioContext) => {
-    // await audioContext.audioWorklet.addModule('AudioWorklet0.js');
-    await audioContext.audioWorklet.addModule('/js/AudioWorklet1.js');
 
-    const worker = new Worker('/js/AudioWorker1.js');
+    console.log(crossOriginIsolated);
 
-    worker.onmessage = (buffers) => { console.log('Worker is live'); };
+    const buffer = new SharedArrayBuffer(128 * 8 * 4 + 2 * 4);
 
-    worker.postMessage(0);
+    const indices = new Int32Array(buffer, 128 * 8 * 4, 2);
+    indices[0] = 0;    // Worker-controlled head
+    indices[1] = 0;    // Processor-controlled tail
 
-    //let node = new AudioWorkletNode(audioContext, 'AudioWorklet1');
-    //node.connect(audioContext.destination);
+    await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
+
+    let node = new AudioWorkletNode(audioContext, 'VTPlayerAudioWorklet');
+    node.port.postMessage(buffer);
+    node.connect(audioContext.destination);
+
+    const worker = new Worker('/js/VTPlayerWorker.js');
+    worker.postMessage(buffer);
 };

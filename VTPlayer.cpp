@@ -22,8 +22,3 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
     }
     return sizeInFloats;
 }
-
-int main()
-{
-    printf("Hello C++\n");
-}
