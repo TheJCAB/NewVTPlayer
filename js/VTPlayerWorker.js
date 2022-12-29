@@ -18,7 +18,7 @@ onmessage = async (event) => {
     ringBuffer = new Float32Array(sharedBuffer, 0, 128 * 8);
     indices = new Int32Array(sharedBuffer, 128 * 8 * 4, 2);
 
-    const { default : createVTPlayer } = await import('/js/bin/VTPlayer.js');
+    const { default : createVTPlayer } = await import('/js/VTPlayer.js');
 
     console.log(createVTPlayer);
 
@@ -57,15 +57,15 @@ onmessage = async (event) => {
             if (head + filled <= 128 * 8)
             {
                 ringBuffer.set(vtPlayerBuffer.subarray(0, filled), head);
+                Atomics.store(indices, 0, head + filled);
             }
             else
             {
                 const firstSize = 128 * 8 - head;
-                ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled), head);
-                ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize));
+                ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize), head);
+                ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled));
+                Atomics.store(indices, 0, filled - firstSize);
             }
-
-            Atomics.store(indices, 0, (head + filled) % (128 * 8));
         }
     }
 };
