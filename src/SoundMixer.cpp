@@ -180,7 +180,7 @@ public:
 
         assert(!dest.empty());
 
-        auto const n = static_cast<size_t>(std::min<uint64_t>(m_count - offset, count));
+        auto const n = m_count <= offset ? size_t{0} : static_cast<size_t>(std::min<uint64_t>(m_count - offset, count));
         if (copy)
         {
             MixMonoOp<true>(MakeSpan(dest, 0, n), offset);
@@ -201,7 +201,7 @@ public:
 
         assert(!dest.empty());
 
-        auto const n = static_cast<size_t>(std::min<uint64_t>(m_count - offset, count));
+        auto const n = m_count <= offset ? size_t{0} : static_cast<size_t>(std::min<uint64_t>(m_count - offset, count));
         if (copy)
         {
             MixStereoOp<true>(MakeSpan(dest, 0, n), offset);

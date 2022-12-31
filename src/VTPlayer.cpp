@@ -35,9 +35,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
         }
         player = MixBufferEngine(song, 48000u);
         playerIt = player.begin();
+        playerFragmentLeft = 0;
     }
 
-    if (playerFragmentLeft == 0)
+    while (playerFragmentLeft == 0)
     {
         if (playerIt == player.end())
         {

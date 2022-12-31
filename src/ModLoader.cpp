@@ -280,8 +280,8 @@ std::shared_ptr<ModSong> LoadMod(Stream s)
 
     song->Title = s.ReadOEMString(20);
 
-    wprintf(L"Marker: %s\n", song->Marker.c_str());
-    wprintf(L"Name: %s\n", song->Title.c_str());
+    wprintf(L"Marker: %ls\n", song->Marker.c_str());
+    wprintf(L"Name: %ls\n", song->Title.c_str());
 
     uint16_t numSamples = 0;
     uint16_t numChannels = 0;
@@ -345,9 +345,9 @@ std::shared_ptr<ModSong> LoadMod(Stream s)
     //sb.Append("Positions: ");
     for (uint32_t i = 1; i <= 128; ++i)
     {
-        auto dataPositiona = s.Position();
+        // auto dataPositiona = s.Position();
         uint32_t pat = s.ReadType<uint8_t>();
-        auto dataPositionb = s.Position();
+        // auto dataPositionb = s.Position();
         // TODO: DEBUG if (dataPositionb != dataPositiona + 1) __debugbreak();
         if (numPatterns <= pat)
         {

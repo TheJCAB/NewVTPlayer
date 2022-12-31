@@ -6,7 +6,7 @@
 #include <vector>
 
 inline
-std::wstring StdWStringPrintf(wchar_t const* const fmt, ...)
+std::wstring StdWStringPrintf([[maybe_unused]] wchar_t const* const fmt, ...)
 {
     // TODO: std::format
     return {};

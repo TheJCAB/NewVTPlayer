@@ -8,7 +8,7 @@ struct Generator {
     struct promise_type {
         const _Ty* _Value;
 #ifdef _CPPUNWIND
-        exception_ptr _Exception;
+        std::exception_ptr _Exception;
 #endif // _CPPUNWIND
 
         Generator get_return_object() noexcept {

@@ -63,9 +63,9 @@ std::shared_ptr<ModSong> LoadXM(Stream s)
     song->periodTargetLo = ModSong::NoteToPeriod(118);
     song->periodTargetHi = ModSong::NoteToPeriod(0);
 
-    wprintf(L"Tracker:         %s\n", trackerName.c_str());
+    wprintf(L"Tracker:         %ls\n", trackerName.c_str());
     wprintf(L"Version:         %X\n", versionNumber);
-    wprintf(L"Title:           %s\n", song->Title.c_str());
+    wprintf(L"Title:           %ls\n", song->Title.c_str());
     wprintf(L"NumPositions:    %u\n", numPositions);
     wprintf(L"RestartPosition: %u\n", restartPosition);
     wprintf(L"NumChannels:     %u\n", song->NumChannels);
@@ -275,7 +275,7 @@ std::shared_ptr<ModSong> LoadXM(Stream s)
 
         if (numSamples == 0)
         {
-            wprintf(L"Instrument %3u: %s\n", instrumentIndex + 1, instrument.Name.c_str());
+            wprintf(L"Instrument %3u: %ls\n", instrumentIndex + 1, instrument.Name.c_str());
 
             song->Instruments.emplace_back();
 
@@ -380,7 +380,7 @@ std::shared_ptr<ModSong> LoadXM(Stream s)
                     sample.LoopLength /= 2;
                 }
 
-                //wprintf(L"Sample %u: %s\n", firstSample + sampleIndex + 1, sample.Name.c_str());
+                //wprintf(L"Sample %u: %ls\n", firstSample + sampleIndex + 1, sample.Name.c_str());
                 //wprintf(L"Sample Length     : %u\n", sampleLength);
                 //wprintf(L"Sample LoopStart  : %u\n", sampleLoopStart);
                 //wprintf(L"Sample LoopLength : %u\n", sample.LoopLength);

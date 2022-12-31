@@ -241,7 +241,7 @@ static constexpr wchar_t const* NoteList[12]
 
 std::wstring GetNoteName(uint32_t const note)
 {
-    return StdWStringPrintf(L"%s%1u", NoteList[note % 12], note / 12);
+    return StdWStringPrintf(L"%ls%1u", NoteList[note % 12], note / 12);
 }
 
 //static std::wstring RenderCommand(ModSong::ChannelCommand const& command)
@@ -262,7 +262,7 @@ std::wstring GetNoteName(uint32_t const note)
 //
 //    if (command.Note != 0)
 //    {
-//        _snwprintf_s(buffer, _TRUNCATE, L"%s%1u ", NoteList[command.Note % 12], command.Note / 12);
+//        _snwprintf_s(buffer, _TRUNCATE, L"%ls%1u ", NoteList[command.Note % 12], command.Note / 12);
 //        result += buffer;
 //    }
 //    else
@@ -284,12 +284,12 @@ std::wstring GetNoteName(uint32_t const note)
 //    result += buffer;
 //}
 
-std::wstring RenderPosition(ModSong const& song, ModPosition const& modPosition)
+std::wstring RenderPosition([[maybe_unused]] ModSong const& song, [[maybe_unused]] ModPosition const& modPosition)
 {
     wchar_t buffer[1024]{};
 
 // TODO: std::format.
-//    _snwprintf_s(buffer, _TRUNCATE, L"%03u %03u %02u %02u - %s", modPosition.position, modPosition.pattern, modPosition.line, modPosition.numTicks, song.Patterns[modPosition.pattern].Lines[modPosition.line].c_str());
+//    _snwprintf_s(buffer, _TRUNCATE, L"%03u %03u %02u %02u - %ls", modPosition.position, modPosition.pattern, modPosition.line, modPosition.numTicks, song.Patterns[modPosition.pattern].Lines[modPosition.line].c_str());
 
     return std::wstring{ buffer };
 }

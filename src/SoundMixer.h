@@ -4,6 +4,7 @@
 #include <vector>
 #include <span>
 #include <algorithm>
+#include <memory>
 
 namespace VTPlayerLib
 {

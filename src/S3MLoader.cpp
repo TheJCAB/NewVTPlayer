@@ -315,8 +315,8 @@ std::shared_ptr<ModSong> LoadS3M(Stream s)
 
     song->Title = s.ReadOEMString(28);
 
-    wprintf(L"Marker: %s\n", song->Marker.c_str());
-    wprintf(L"Name: %s\n", song->Title.c_str());
+    wprintf(L"Marker: %ls\n", song->Marker.c_str());
+    wprintf(L"Name: %ls\n", song->Title.c_str());
 
     if (song->Marker != L"SCRM")
     {

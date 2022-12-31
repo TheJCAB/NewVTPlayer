@@ -1,4 +1,6 @@
 
+import { RingBufferSize } from "./AudioConstants.js"
+
 class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
     constructor(nodeOptions) {
         super();
@@ -11,10 +13,10 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
     _initialize(initData) {
         const sharedBuffer = initData.data;
 
-        this._indices = new Int32Array(sharedBuffer, 128 * 8 * 4, 2);
+        this._indices = new Int32Array(sharedBuffer, RingBufferSize * 4, 2);
 
         // Worker's output buffer, mono. TODO: Stereo.
-        this._ringBuffer = new Float32Array(sharedBuffer, 0, 128 * 8);
+        this._ringBuffer = new Float32Array(sharedBuffer, 0, RingBufferSize);
 
         this._isInitialized = true;
         //this.port.postMessage({});
@@ -31,7 +33,7 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
         const head = this._indices[0];
         var   tail = this._indices[1];
 
-        const available = (head + 128 * 8 - tail) % (128 * 8);
+        const available = (head + RingBufferSize - tail) % (RingBufferSize);
         if (available < 128)
         {
             // We don't have enough data, so silence it is.
@@ -40,18 +42,18 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        if (tail + 128 <= 128 * 8)
+        if (tail + 128 <= RingBufferSize)
         {
             outputChannelData.set(this._ringBuffer.subarray(tail, tail + 128));
         }
         else
         {
-            const firstSize = 128 * 8 - tail;
+            const firstSize = RingBufferSize - tail;
             outputChannelData.set(this._ringBuffer.subarray(tail, tail + firstSize));
             outputChannelData.set(this._ringBuffer.subarray(0, 128 - firstSize), firstSize);
         }
 
-        Atomics.store(this._indices, 1, (tail + 128) % (128 * 8));
+        Atomics.store(this._indices, 1, (tail + 128) % (RingBufferSize));
         Atomics.notify(this._indices, 1);
 
         return true;
