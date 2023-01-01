@@ -28,7 +28,7 @@ static Generator<ModSong::Instrument::PeriodSamplePair> ParseKeyMap(uint32_t fir
     }
 }
 
-std::shared_ptr<ModSong> LoadXM(Stream s)
+std::shared_ptr<ModSong> LoadXM(IStream& s)
 {
     // assert(s.CanSeek);
     // assert(s.CanRead);
@@ -283,7 +283,7 @@ std::shared_ptr<ModSong> LoadXM(Stream s)
         }
         else
         {
-            wprintf(L"Instrument %3u: %-22s  Samples:%3u\n", instrumentIndex + 1, instrument.Name.c_str(), numSamples);
+            wprintf(L"Instrument %3u: %-22ls  Samples:%3u\n", instrumentIndex + 1, instrument.Name.c_str(), numSamples);
 
             auto const sampleHdrSize = s.ReadType<uint32_t>();
 

@@ -302,7 +302,7 @@ static bool ParseS3MEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& g
     }
 }
 
-std::shared_ptr<ModSong> LoadS3M(Stream s)
+std::shared_ptr<ModSong> LoadS3M(IStream& s)
 {
     // Debug.Assert(s.CanSeek);
     // Debug.Assert(s.CanRead);

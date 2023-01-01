@@ -6,7 +6,7 @@
 namespace VTPlayerLib
 {
 
-typedef std::shared_ptr<ModSong> LoadSongFunc(Stream);
+typedef std::shared_ptr<ModSong> LoadSongFunc(IStream&);
 
 LoadSongFunc LoadMod;
 LoadSongFunc LoadS3M;

@@ -267,7 +267,7 @@ bool ParseModEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& globalCo
     return false;
 }
 
-std::shared_ptr<ModSong> LoadMod(Stream s)
+std::shared_ptr<ModSong> LoadMod(IStream& s)
 {
     // Debug.Assert(s.CanSeek);
     // Debug.Assert(s.CanRead);
@@ -524,7 +524,7 @@ std::shared_ptr<ModSong> LoadMod(Stream s)
                     sample.FineTune = (float)pow(2, -(1 / 96.0) * (((int)finetune & 15) - 16));
                 }
 
-                wprintf(L"Instrument %2u: %-22s, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
+                wprintf(L"Instrument %2u: %-22ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
                     sampleIndex + 1,
                     sample.Name.c_str(),
                     length,

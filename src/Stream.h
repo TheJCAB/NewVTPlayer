@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <span>
 
 namespace VTPlayerLib
 {
@@ -282,21 +283,76 @@ struct uint24_t
 
 static_assert(sizeof(uint24_t) == 3);
 
-struct Stream
+struct IStream
+{
+    virtual ~IStream() = 0;
+
+    virtual int32_t Position() const = 0;
+    virtual void Seek(int32_t pos, SeekOrigin origin) = 0;
+    virtual int32_t Length() = 0;
+    virtual size_t ReadBytes(std::span<std::byte>) = 0;
+
+    template < typename T >
+    T ReadType()
+    {
+        alignas(T) uint8_t buf[sizeof(T)];
+        static_assert(sizeof(std::byte) == sizeof(char));
+        ReadBytes(std::span{ reinterpret_cast<std::byte*>(buf), std::size(buf) });
+        return *reinterpret_cast<T const*>(buf);
+    }
+
+    template < typename T >
+    T ReadTypeBE()
+    {
+        alignas(T) uint8_t buf[sizeof(T)];
+        static_assert(sizeof(std::byte) == sizeof(char));
+        ReadBytes(std::span{ reinterpret_cast<std::byte*>(buf), std::size(buf) });
+        std::reverse(std::begin(buf), std::end(buf));
+        return *reinterpret_cast<T const*>(buf);
+    }
+
+    std::wstring ReadString(size_t length)
+    {
+        std::string s(length, ' ');
+        static_assert(sizeof(std::byte) == sizeof(char));
+        ReadBytes(std::span{ reinterpret_cast<std::byte*>(s.data()), length });
+        return std::wstring{ s.begin(), s.end() };
+    }
+
+    std::wstring ReadOEMString(size_t length)
+    {
+        std::string s(length, ' ');
+        std::wstring w(length, L' ');
+        static_assert(sizeof(std::byte) == sizeof(char));
+        ReadBytes(std::span{ reinterpret_cast<std::byte*>(s.data()), length });
+        for (size_t i = 0; i < length; ++i)
+        {
+            w[i] = c_oemTable[static_cast<uint8_t>(s[i])];
+        }
+        return w;
+    }
+
+};
+
+inline IStream::~IStream() {}
+
+struct Stream final : IStream
 {
     FILE* f;
 
-    int32_t Position() const
+    explicit Stream(FILE*&& f) : f{f} {}
+
+    int32_t Position() const override
     {
         return ftell(f);
     }
 
-    void Seek(int32_t pos, SeekOrigin origin)
+    void Seek(int32_t pos, SeekOrigin origin) override
     {
         fseek(f, pos, static_cast<uint8_t>(origin));
     }
 
-    int32_t Length()
+    int32_t Length() override
     {
         auto const pos = Position();
         Seek(0, SeekOrigin::End);
@@ -305,40 +361,51 @@ struct Stream
         return result;
     }
 
-    template < typename T >
-    T ReadType()
+    size_t ReadBytes(std::span<std::byte> dest) override
     {
-        alignas(T) uint8_t buf[sizeof(T)];
-        fread(buf, 1, sizeof(T), f);
-        return *reinterpret_cast<T const*>(buf);
+        return fread(dest.data(), 1, dest.size(), f);
+    }
+};
+
+struct MemStream final : IStream
+{
+    std::span<std::byte const> m_buffer;
+    int32_t m_position = 0;
+
+    explicit MemStream(std::span<std::byte const> buffer) : m_buffer{buffer} {}
+
+    int32_t Position() const override
+    {
+        return m_position;
     }
 
-    template < typename T >
-    T ReadTypeBE()
+    void Seek(int32_t pos, SeekOrigin origin) override
     {
-        alignas(T) uint8_t buf[sizeof(T)];
-        fread(buf, 1, sizeof(T), f);
-        std::reverse(std::begin(buf), std::end(buf));
-        return *reinterpret_cast<T const*>(buf);
-    }
-
-    std::wstring ReadString(size_t length)
-    {
-        std::string s(length, ' ');
-        fread(s.data(), 1, length, f);
-        return std::wstring{ s.begin(), s.end() };
-    }
-
-    std::wstring ReadOEMString(size_t length)
-    {
-        std::string s(length, ' ');
-        std::wstring w(length, L' ');
-        fread(s.data(), 1, length, f);
-        for (size_t i = 0; i < length; ++i)
+        switch (origin)
         {
-            w[i] = c_oemTable[static_cast<uint8_t>(s[i])];
+        case SeekOrigin::Begin:
+            m_position = std::clamp(pos, 0, Length());
+            return;
+
+        case SeekOrigin::Current:
+            return Seek(m_position + pos, SeekOrigin::Begin);
+
+        case SeekOrigin::End:
+            return Seek(Length() + pos, SeekOrigin::Begin);
         }
-        return w;
+    }
+
+    int32_t Length() override
+    {
+        return static_cast<int32_t>(m_buffer.size());
+    }
+
+    size_t ReadBytes(std::span<std::byte> dest) override
+    {
+        auto const read = std::min(dest.size(), m_buffer.size() - m_position);
+        std::copy_n(m_buffer.begin() + m_position, read, dest.begin());
+        m_position += static_cast<int32_t>(read);
+        return read;
     }
 };
 

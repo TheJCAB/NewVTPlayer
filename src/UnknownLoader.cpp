@@ -7,7 +7,7 @@
 namespace VTPlayerLib
 {
 
-std::shared_ptr<ModSong> LoadUnknown(Stream s)
+std::shared_ptr<ModSong> LoadUnknown(IStream& s)
 {
     s.Seek(44, SeekOrigin::Begin);
     auto marker = s.ReadString(4);

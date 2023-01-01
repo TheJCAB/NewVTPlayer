@@ -35,13 +35,26 @@ onmessage = async (event) => {
 
     memory = VTPlayerModule.asm.memory;
 
-    AllocateAudioBuffer = VTPlayerModule._AllocateAudioBuffer;
-    FreeAudioBuffer     = VTPlayerModule._FreeAudioBuffer    ;
-    VTPlayerGetAudio    = VTPlayerModule._VTPlayerGetAudio   ;
+    malloc                      = VTPlayerModule._malloc                    ;
+    free                        = VTPlayerModule._free                      ;
+    AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
+    FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
+    VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
+    VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
 
     const bufferSizeInFloats = 128; //RingBufferSize / 4;
     const bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
     const vtPlayerBuffer     = new Float32Array(memory.buffer, bufferPtr, bufferSizeInFloats);
+
+    {
+        var response = await fetch("/MODs/MOD/CONDOM.MOD");
+        var buffer = await response.arrayBuffer();
+        const modSizeInBytes = buffer.byteLength;
+        const modPtr         = malloc(modSizeInBytes);
+        (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+        VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes);
+        free(modPtr);
+    }
 
     postMessage(0);
 

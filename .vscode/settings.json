@@ -13,6 +13,7 @@
     "liveServer.settings.mount": [
         ["/js", "./js"],
         ["/js", ".//build/WASM-Debug-EM/bin"]
+        ["/MODs", "C:/Users/jcab/Music/MODs"]
     ],
     "files.associations": {
         "*.json": "jsonc",
