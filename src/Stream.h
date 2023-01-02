@@ -367,6 +367,14 @@ struct Stream final : IStream
     }
 };
 
+template < typename T >
+constexpr T Clamp(T value, T minValue, T maxValue)
+{
+    return  value <= minValue ? minValue :
+            value >= maxValue ? maxValue :
+                                value;
+}
+
 struct MemStream final : IStream
 {
     std::span<std::byte const> m_buffer;
@@ -384,7 +392,7 @@ struct MemStream final : IStream
         switch (origin)
         {
         case SeekOrigin::Begin:
-            m_position = std::clamp(pos, 0, Length());
+            m_position = Clamp(pos, 0, Length());
             return;
 
         case SeekOrigin::Current:

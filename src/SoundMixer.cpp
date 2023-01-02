@@ -293,7 +293,7 @@ Fragment MakeStraightFragment(std::shared_ptr<std::vector<float>> sampleData, si
 class MixFragment : public IFragment
 {
     std::vector<Fragment> m_channels;
-    size_t                                  m_count;
+    size_t                m_count;
 
     friend Fragment MakeMixFragment(std::vector<Fragment> channels, size_t count);
 

@@ -12,13 +12,27 @@
 
     <script>
       var buttonEl;
+      var audioContext;
 
-      const onClickButton = async () => {
+      const onPlay = async () => {
         buttonEl.disabled = true;
-        var audioContext = new AudioContext();
-        await startAudio(audioContext);
+
+        if (audioContext == undefined)
+        {
+          audioContext = new AudioContext();
+          await startAudio(audioContext);
+          buttonEl.textContent = 'Next...';
+        }
+        else
+        {
+          audioContext.suspend()
+          await startNextAudio();
+          console.log('Next audio started');
+        }
+
         audioContext.resume();
-        buttonEl.textContent = 'Playing...';
+
+        buttonEl.disabled = false;
         console.log('Audio started');
       };
 
@@ -27,7 +41,7 @@
       window.addEventListener('load', async () => {
         buttonEl = document.getElementById('start-button');
         buttonEl.disabled = false;
-        buttonEl.addEventListener('click', onClickButton, false);
+        buttonEl.addEventListener('click', onPlay, false);
       });
 
       //const startButton = document.getElementById('start-button');

@@ -13,7 +13,7 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
     _initialize(initData) {
         const sharedBuffer = initData.data;
 
-        this._indices = new Int32Array(sharedBuffer, RingBufferSize * 4, 2);
+        this._indices = new Int32Array(sharedBuffer, RingBufferSize * 4, 3);
 
         // Worker's output buffer, mono. TODO: Stereo.
         this._ringBuffer = new Float32Array(sharedBuffer, 0, RingBufferSize);
