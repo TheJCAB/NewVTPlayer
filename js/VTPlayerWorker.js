@@ -10,6 +10,7 @@ var VTPlayerLoadSongFromMemory;
 var VTPlayerGetAudio;
 
 var sharedBuffer;
+var sampleRate;
 var ringBuffer;
 var indices;
 
@@ -62,7 +63,7 @@ function processMessage(event)
     const modSizeInBytes = buffer.byteLength;
     const modPtr         = malloc(modSizeInBytes);
     (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
-    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes);
+    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
     free(modPtr);
 
     mainLoop();
@@ -74,7 +75,8 @@ var onmessage = async (event) => {
 
     RingBufferSize = audioConstants.RingBufferSize;
 
-    sharedBuffer = event.data;
+    sharedBuffer = event.data.buffer;
+    sampleRate = event.data.sampleRate;
     ringBuffer = new Float32Array(sharedBuffer, 0, RingBufferSize);
     indices = new Int32Array(sharedBuffer, RingBufferSize * 4, 3);
 
@@ -102,12 +104,12 @@ var onmessage = async (event) => {
     vtPlayerBuffer     = new Float32Array(memory.buffer, bufferPtr, bufferSizeInFloats);
 
     {
-        var response = await fetch("/MODs/MOD/CONDOM.MOD");
+        var response = await fetch("/MODs/S3M/ctgoblin.s3m");
         var buffer = await response.arrayBuffer();
         const modSizeInBytes = buffer.byteLength;
         const modPtr         = malloc(modSizeInBytes);
         (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
-        VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes);
+        VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
         free(modPtr);
     }
 
