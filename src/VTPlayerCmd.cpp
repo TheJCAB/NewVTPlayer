@@ -241,11 +241,22 @@ int VTPlayerCmd(std::span<std::string_view const> args)
 {
     if (args[1] == "loadlist")
     {
+        // A sort of stress test. Loads all files in the list.
+
+        std::shared_ptr<VTPlayerLib::ModSong const> song;
+        Generator<VTPlayerLib::Fragment> player;
+
         for (auto&& songFileName : ModFiles)
         {
             printf("%s\n", songFileName.data());
             VTPlayerLib::Stream s{ fopen((R"(C:\Users\jcab\Music\MODs\)"s + std::string(songFileName)).c_str(), "rb") };
-            VTPlayerLib::LoadUnknown(s);
+            song = VTPlayerLib::LoadUnknown(s);
+            player = MixBufferEngine(song, 48000u);
+            for (auto fragment : player)
+            {
+                // Do nothing, just get them all.
+                fragment = fragment;
+            }
         }
     }
     else if (args[1] == "randomList")

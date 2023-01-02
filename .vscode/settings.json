@@ -64,6 +64,7 @@
         "variant": "cpp",
         "vector": "cpp",
         "algorithm": "cpp",
-        "xstring": "cpp"
+        "xstring": "cpp",
+        "random": "cpp"
     },
 }

@@ -26,18 +26,20 @@ extern "C" EMSCRIPTEN_KEEPALIVE void FreeAudioBuffer(float* buffer)
 
 extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerLoadSongFromMemory(void const* buffer, int sizeInBytes, int sampleRate)
 {
+    // To save memory, get rid of the previous song before loading the next one.
+    song               = {};
+    player             = {};
+    playerIt           = {};
+    playerFragmentLeft = 0;
+
     VTPlayerLib::MemStream s{ std::span{ static_cast<std::byte const*>(buffer), static_cast<size_t>(sizeInBytes) } };
     song = LoadUnknown(s);
     if (!song)
     {
-        player             = {};
-        playerIt           = {};
-        playerFragmentLeft = 0;
         return;
     }
     player             = MixBufferEngine(song, static_cast<uint32_t>(sampleRate));
     playerIt           = player.begin();
-    playerFragmentLeft = 0;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFloats)

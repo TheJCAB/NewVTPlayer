@@ -34,10 +34,9 @@ struct Generator {
 #endif // _KERNEL_MODE
 
 #ifdef _CPPUNWIND
-        void _Rethrow_if_exception() {
-            if (_Exception) {
-                std::rethrow_exception(_Exception);
-            }
+        std::exception_ptr ExtractException() {
+            // Destructively return the stored exception pointer (if any), avoiding copies.
+            return std::exchange(_Exception, {});
         }
 #endif // _CPPUNWIND
 
@@ -71,9 +70,15 @@ struct Generator {
         iterator& operator++() {
             m_handle.resume();
             if (m_handle.done()) {
+                // Note: the handle is not owned here.
+                // It's owned by the Generator object and must only be destroyed there.
 #ifdef _CPPUNWIND
-                std::exchange(m_handle, nullptr).promise()._Rethrow_if_exception();
-#else // ^^^ defined(_CPPUNWIND) / !defined(_CPPUNWIND) vvv
+                // Note: nullify the handle before rethrowing, for good measure.
+                if (auto const exceptionPtr = std::exchange(m_handle, nullptr).promise().ExtractException())
+                {
+                    std::rethrow_exception(exceptionPtr);
+                }
+#else
                 m_handle = nullptr;
 #endif // _CPPUNWIND
             }
@@ -106,12 +111,25 @@ struct Generator {
 
     [[nodiscard]] iterator begin() {
         if (m_handle) {
-            m_handle.resume();
+            if (!m_handle.done()) {
+                m_handle.resume();
+            }
             if (m_handle.done()) {
 #ifdef _CPPUNWIND
-                m_handle.promise()._Rethrow_if_exception();
+                auto const exceptionPtr = m_handle.promise().ExtractException();
 #endif // _CPPUNWIND
-                return {};
+                // Deterministically destroy the coroutine before throwing the exeption (if any).
+                // This is for consistency: this would happen anyway if the owning Generator object
+                // is destroyed as part of unwinding!
+                // Exceptions should be thrown by value.
+                m_handle.destroy();
+                m_handle = {};
+#ifdef _CPPUNWIND
+                if (exceptionPtr)
+                {
+                    std::rethrow_exception(exceptionPtr);
+                }
+#endif // _CPPUNWIND
             }
         }
 
@@ -129,12 +147,15 @@ struct Generator {
     Generator(Generator&& _Right) noexcept : m_handle(std::exchange(_Right.m_handle, nullptr)) {}
 
     Generator& operator=(Generator&& _Right) noexcept {
-        m_handle = std::exchange(_Right.m_handle, nullptr);
+        std::swap(m_handle, _Right.m_handle);
         return *this;
     }
 
     ~Generator() {
         if (m_handle) {
+            // Note: there can't be an exception here.
+            // It's either already be extracted and thrown, or they never called begin() in the first place,
+            // in which case the coroutine never got to run.
             m_handle.destroy();
         }
     }

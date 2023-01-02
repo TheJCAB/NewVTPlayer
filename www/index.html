@@ -24,15 +24,13 @@
           audioContext = new AudioContext();
           await startAudio(audioContext);
           buttonEl.textContent = 'Next...';
+          audioContext.resume();
         }
         else
         {
-          audioContext.suspend()
           await startNextAudio();
           console.log('Next audio started');
         }
-
-        audioContext.resume();
 
         buttonEl.disabled = false;
         console.log('Audio started');

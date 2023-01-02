@@ -1,4 +1,5 @@
 
+var VTPlayerModule;
 var memory;
 
 var malloc;
@@ -59,6 +60,9 @@ function processMessage(event)
 {
     //console.log('Process message');
 
+    // TODO: Instead of putting the file in a WASM memory buffer,
+    // we should look into putting it in the WASM filesystem.
+    // That'd save some precious WASM memory.
     const buffer         = event.data;
     const modSizeInBytes = buffer.byteLength;
     const modPtr         = malloc(modSizeInBytes);
@@ -84,7 +88,7 @@ var onmessage = async (event) => {
 
     console.log(createVTPlayer);
 
-    const VTPlayerModule = await createVTPlayer();
+    VTPlayerModule = await createVTPlayer();
 
     console.log(VTPlayerModule);
     console.log(Object.keys(VTPlayerModule));
