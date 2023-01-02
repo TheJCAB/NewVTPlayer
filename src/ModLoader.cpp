@@ -576,6 +576,11 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
             }
             else
             {
+                wprintf(L"Instrument %2u: %-22ls (none)\n",
+                    sampleIndex + 1,
+                    name.c_str()
+                );
+
                 song->Samples.push_back({});
             }
 

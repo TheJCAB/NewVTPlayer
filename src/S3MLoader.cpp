@@ -16,6 +16,10 @@ static wchar_t GetEffectChar(uint8_t const effect)
     {
         return L' ';
     }
+    else if (effect > L'Z' - L'A')
+    {
+        return L'?';
+    }
     else
     {
         return L'A' + (effect - 1);
@@ -500,7 +504,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     }
                     else
                     {
-                        line += StdWStringPrintf(L"%1c %2X", GetEffectChar(effect), XY).c_str();
+                        line += StdWStringPrintf(L"%1lc %2X", GetEffectChar(effect), XY).c_str();
                     }
 
                     if (!ParseS3MEffect(effect, XY, globalCommand, command))
@@ -510,7 +514,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                         ++count;
                         if (count == 1)
                         {
-                            wprintf(L"%3u %2u %2u - Unknown command: %u %c %02X\n", patIndex, division, channel & 31, effect, (effect - 1 + L'A'), XY);
+                            wprintf(L"%3u %2u %2u - Unknown command: %u %1lc %02X\n", patIndex, division, channel & 31, effect, GetEffectChar(effect), XY);
                         }
                     }
                 }
@@ -567,6 +571,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
 
     std::wstring infoString{};
 
+    uint32_t sampleIndex = 0;
     for (auto const offset : instrumentOffsets)
     {
         s.Seek(offset, SeekOrigin::Begin);
@@ -578,6 +583,11 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
         {
             s.Seek(47, SeekOrigin::Current);
             infoString += s.ReadOEMString(28) + L"\n";
+
+            wprintf(L"Instrument %2u: %-28ls (none)\n",
+                static_cast<uint32_t>(song->Samples.size() + 1),
+                sample.Name.c_str()
+            );
         }
         else
         {
@@ -602,7 +612,8 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
             sample.Tune = 8363.0 / C2spd;
             sample.FineTune = 1.0;
 
-            infoString += s.ReadOEMString(28) + L"\n";
+            auto const sampleInfo = s.ReadOEMString(28);
+            infoString += sampleInfo + L"\n";
             auto const marker = s.ReadString(4);
 
             assert(marker == L"SCRS");
@@ -621,6 +632,16 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     }
                 }
                 auto const sampleLengthWithPad = sampleLength + 1;
+
+                wprintf(L"Instrument %2u: %-28ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
+                    static_cast<uint32_t>(song->Samples.size() + 1),
+                    sampleInfo.c_str(),
+                    sampleLength,
+                    sample.FineTune,
+                    sample.Volume,
+                    sampleLoopStart,
+                    sample.LoopLength
+                );
 
                 s.Seek(soffset, SeekOrigin::Begin);
                 sample.PCM = std::make_shared<std::vector<float>>();
