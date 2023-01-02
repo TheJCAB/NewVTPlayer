@@ -3,31 +3,6 @@ var vtPlayerWorker;
 
 var indices;
 
-window.startAudio = async (audioContext) => {
-
-    const audioConstants = await import("./AudioConstants.js");
-
-    const RingBufferSize = audioConstants.RingBufferSize;
-
-    console.log(crossOriginIsolated);
-
-    const buffer = new SharedArrayBuffer(RingBufferSize * 4 + 3 * 4);
-
-    indices = new Int32Array(buffer, RingBufferSize * 4, 3);
-    indices[0] = 0;    // Worker-controlled head
-    indices[1] = 0;    // Processor-controlled tail
-    indices[2] = 0;    // Posted message count
-
-    await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
-
-    let node = new AudioWorkletNode(audioContext, 'VTPlayerAudioWorklet');
-    node.port.postMessage(buffer);
-    node.connect(audioContext.destination);
-
-    vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
-    vtPlayerWorker.postMessage({ buffer: buffer, sampleRate: audioContext.sampleRate });
-};
-
 const modFiles =
 [
     "MOD/8CHN.MOD",
@@ -242,14 +217,57 @@ const modFiles =
     "XM/TODO5.XM"
 ];
 
-window.startNextAudio = async () => {
+var modListElement;
 
-    const index = Math.floor(Math.random() * modFiles.length);
-
-    const response = await fetch("/MODs/" + modFiles[index]);
+async function startMod(mod)
+{
+    const response = await fetch("/MODs/" + mod);
     const buffer   = await response.arrayBuffer();
 
     vtPlayerWorker.postMessage(buffer);
     const oldCount = Atomics.add(indices, 2, 1);
     //console.log('Count increased to ', oldCount + 1);
+};
+
+window.startAudio = async (audioContext) =>
+{
+    modListElement = document.querySelector('#mod-list');
+    for (var modFile of modFiles)
+    {
+        var option = document.createElement('option');
+        option.text = modFile;
+        modListElement.add(option, null);
+    }
+
+    modListElement.addEventListener('change', () => startMod(modListElement.value), false);
+    modListElement.hidden = false;
+
+    const audioConstants = await import("./AudioConstants.js");
+
+    const RingBufferSize = audioConstants.RingBufferSize;
+
+    console.log(crossOriginIsolated);
+
+    const buffer = new SharedArrayBuffer(RingBufferSize * 4 + 3 * 4);
+
+    indices = new Int32Array(buffer, RingBufferSize * 4, 3);
+    indices[0] = 0;    // Worker-controlled head
+    indices[1] = 0;    // Processor-controlled tail
+    indices[2] = 0;    // Posted message count
+
+    await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
+
+    let node = new AudioWorkletNode(audioContext, 'VTPlayerAudioWorklet');
+    node.port.postMessage(buffer);
+    node.connect(audioContext.destination);
+
+    vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
+    vtPlayerWorker.postMessage({ buffer: buffer, sampleRate: audioContext.sampleRate });
+};
+
+window.startNextAudio = async () =>
+{
+    const index = Math.floor(Math.random() * modFiles.length);
+
+    startMod(modFiles[index]);
 };
