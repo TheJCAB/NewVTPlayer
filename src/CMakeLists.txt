@@ -44,13 +44,16 @@ if ("${COMPILER_TOOLCHAIN}" STREQUAL "Emscripten")
             -sEXPORT_ES6
             --preload-file "C:/Users/jcab/Music/MODs/MOD/CHECKNOB.MOD@CHECKNOB.MOD"
     )
+
 else()
+
     add_executable(VTPlayer
         VTPlayerCmd.cpp
 
         AudioOut.cpp        AudioOut.h
         WriteWav.h
     )
+
 endif()
 
 target_link_libraries(VTPlayer PRIVATE VTPlayerLib)
