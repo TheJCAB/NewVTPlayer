@@ -3,88 +3,91 @@
   <head>
     <meta charset="utf-8">
 
-    <title>Simple template</title>
+    <title>VTPlayer</title>
+    <style>
+      body {
+        position: fixed;
+        left: 0%;
+        top: 0%;
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+      }
+      .app {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        right: 0px;
+        bottom: 0px;
+        border: 1px solid rgb(0, 0, 0);
+        margin: 0px;
+        padding: 0px;
+
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+        grid-template-rows: 1fr;
+      }
+      .leftPane {
+        grid-column-start: 1;
+        grid-column-end: 2;
+        grid-row-start: 1;
+        grid-row-end: 2;
+
+        display: grid;
+        grid-template-rows: 1fr 6fr;
+
+        border: 1px solid rgb(0, 0, 0);
+        margin: 0px;
+        padding: 0px;
+      }
+      .mainPane {
+        grid-column-start: 2;
+        grid-column-end: 6;
+        grid-row-start: 1;
+        grid-row-end: 2;
+
+        border: 1px solid rgb(0, 0, 0);
+        margin: 0px;
+        padding: 0px;
+      }
+      .menuButton {
+        width: 100%;
+        height: 100%;
+      }
+      .menu {
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        border: 1px solid rgb(0, 0, 0);
+        margin: 0px;
+      }
+      .modList {
+        width: 100%;
+        height: 100%;
+        border: 1px solid rgb(0, 0, 0);
+        margin: 0px;
+      }
+    </style>
   </head>
   <body>
+    <div class="app">
+      <div class="leftPane">
+        <div class="menu">
+            <button class="menuButton" id="start-button">Start random song</button><br>
+        </div>
+        <div class="modList">
+            <select class="modList" id="mod-list" height="100%" size="5"></select>
+        </div>
+      </div>
+      <div class="mainPane">
+      </div>
+    </div>
+
     <script src="js/main.js" type="application/javascript"></script>
 
-    <button id="start-button">Start audio</button><br>
-
-    <select id="mod-list" size="50" hidden="true"></select><br>
-
     <script>
-      var buttonEl;
-      var audioContext;
-
-      const onPlay = async () => {
-        buttonEl.disabled = true;
-
-        if (audioContext == undefined)
-        {
-          audioContext = new AudioContext();
-          await startAudio(audioContext);
-          buttonEl.textContent = 'Next...';
-          audioContext.resume();
-        }
-        else
-        {
-          await startNextAudio();
-          console.log('Next audio started');
-        }
-
-        buttonEl.disabled = false;
-        console.log('Audio started');
-      };
-
-      // A simple onLoad handler. It also handles user gesture to unlock the audio
-      // playback.
-      window.addEventListener('load', async () => {
-        buttonEl = document.getElementById('start-button');
-        buttonEl.disabled = false;
-        buttonEl.addEventListener('click', onPlay, false);
-      });
-
-      //const startButton = document.getElementById('start-button');
-      //startButton.addEventListener('click', startAudioContext);
-
-/*
-      // Create an audio source node and configure it to receive audio data from the worker thread
-      const audioSourceNode = audioContext.createBufferSource();
-      const audioWorkletNode = audioContext.createScriptProcessor(1024, 2, 2);
-
-      // Set up the audio buffers
-      const inputBuffer = new Float32Array(scriptProcessorNode.bufferSize);
-      const outputBuffer = new Float32Array(scriptProcessorNode.bufferSize);
-
-      // Set up the script processor node to receive audio data from the worker thread
-      scriptProcessorNode.onaudioprocess = function(event) {
-        // Copy the audio data from the input buffer to the output buffer
-        event.outputBuffer.getChannelData(0).set(inputBuffer.subarray(0, event.outputBuffer.length));
-        event.outputBuffer.getChannelData(1).set(inputBuffer.subarray(event.outputBuffer.length, event.outputBuffer.length * 2));
-      };
-
-      // Connect the audio nodes
-      audioSourceNode.connect(scriptProcessorNode);
-      scriptProcessorNode.connect(audioContext.destination);
-
-      // Start the audio
-      audioSourceNode.start();
-
-      // Send a message to the worker thread to start generating audio
-      worker.postMessage({
-        type: 'start',
-        sampleRate: audioContext.sampleRate
-      });
-
-      //WebAssembly.instantiateStreaming(
-      //  fetch('calc.wasm'),
-      //).then(result => {
-      //  const add = result.instance.exports.add;
-      //  const sub = result.instance.exports.sub;
-      //  console.log(add(1,2));
-      //  console.log(sub(2,1));
-      //});
-*/
+      initialize()
     </script>
   </body>
 </html>

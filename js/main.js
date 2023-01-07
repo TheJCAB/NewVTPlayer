@@ -3,6 +3,10 @@ var vtPlayerWorker;
 
 var indices;
 
+var buttonEl;
+var modListEl = document.querySelector('#mod-list');
+var audioContext;
+
 const modFiles =
 [
     "MOD/8CHN.MOD",
@@ -221,6 +225,11 @@ var modListElement;
 
 async function startMod(mod)
 {
+    if (vtPlayerWorker == undefined)
+    {
+        await startAudio();
+    }
+
     const response = await fetch("/MODs/" + mod);
     const buffer   = await response.arrayBuffer();
 
@@ -229,9 +238,9 @@ async function startMod(mod)
     //console.log('Count increased to ', oldCount + 1);
 };
 
-window.startAudio = async (audioContext) =>
+window.populateModList = (modListEl) =>
 {
-    modListElement = document.querySelector('#mod-list');
+    modListElement = modListEl;
     for (var modFile of modFiles)
     {
         var option = document.createElement('option');
@@ -239,8 +248,16 @@ window.startAudio = async (audioContext) =>
         modListElement.add(option, null);
     }
 
-    modListElement.addEventListener('change', () => startMod(modListElement.value), false);
-    modListElement.hidden = false;
+    modListElement.addEventListener('change', async () => await startMod(modListElement.value), false);
+};
+
+window.startAudio = async () =>
+{
+    if (audioContext == undefined)
+    {
+        audioContext = new AudioContext();
+        audioContext.resume();
+    }
 
     const audioConstants = await import("./AudioConstants.js");
 
@@ -263,11 +280,32 @@ window.startAudio = async (audioContext) =>
 
     vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
     vtPlayerWorker.postMessage({ buffer: buffer, sampleRate: audioContext.sampleRate });
+
+    //await new Promise(resolve => { node.port.onmessage = (event) => { resolve(event); } });
+    await new Promise(resolve => { vtPlayerWorker.onmessage = (event) => { resolve(event); } });
 };
 
-window.startNextAudio = async () =>
+window.initialize = async () =>
 {
-    const index = Math.floor(Math.random() * modFiles.length);
+    populateModList(modListEl);
 
-    startMod(modFiles[index]);
-};
+    const onPlay = async () => {
+        buttonEl.disabled = true;
+
+        const index = Math.floor(Math.random() * modFiles.length);
+    
+        modListElement.value = modFiles[index];
+        startMod(modFiles[index]);
+
+        buttonEl.disabled = false;
+        console.log('Random song: ', modFiles[index]);
+    };
+
+    // A simple onLoad handler. It also handles user gesture to unlock the audio
+    // playback.
+    window.addEventListener('load', async () => {
+        buttonEl = document.getElementById('start-button');
+        buttonEl.disabled = false;
+        buttonEl.addEventListener('click', onPlay, false);
+    });
+}

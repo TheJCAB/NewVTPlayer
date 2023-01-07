@@ -51,8 +51,6 @@ function mainLoop()
             }
         }
     }
-    const oldCount = Atomics.sub(indices, 2, 1);
-    //console.log('count was ', oldCount);
 }
 
 
@@ -70,6 +68,8 @@ function processMessage(event)
     VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
     free(modPtr);
 
+    const oldCount = Atomics.sub(indices, 2, 1);
+    //console.log('count was ', oldCount);
     mainLoop();
 }
 
@@ -107,19 +107,19 @@ var onmessage = async (event) => {
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
     vtPlayerBuffer     = new Float32Array(memory.buffer, bufferPtr, bufferSizeInFloats);
 
-    {
-        var response = await fetch("/MODs/S3M/ctgoblin.s3m");
-        var buffer = await response.arrayBuffer();
-        const modSizeInBytes = buffer.byteLength;
-        const modPtr         = malloc(modSizeInBytes);
-        (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
-        VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
-        free(modPtr);
-    }
+    //{
+    //    var response = await fetch("/MODs/S3M/ctgoblin.s3m");
+    //    var buffer = await response.arrayBuffer();
+    //    const modSizeInBytes = buffer.byteLength;
+    //    const modPtr         = malloc(modSizeInBytes);
+    //    (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+    //    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
+    //    free(modPtr);
+    //}
 
     onmessage = processMessage;
 
     postMessage(0);
 
-    mainLoop();
+    //mainLoop();
 };
