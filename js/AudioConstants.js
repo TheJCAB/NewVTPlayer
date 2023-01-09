@@ -1,2 +1,2 @@
 
-export const RingBufferSize = 128 * 128;
+export const RingBufferSize = 128 * 8;

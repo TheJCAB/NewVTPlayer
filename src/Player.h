@@ -10,20 +10,35 @@ namespace VTPlayerLib
 
 struct ModPosition
 {
-    uint32_t position;
-    uint32_t pattern;
-    uint32_t line;
-    uint32_t numTicks;
-    uint32_t numSamples;
+    uint32_t position    = 0;
+    uint32_t line        = 0;
 
-    auto ToTuple() const noexcept { return std::tie(position, pattern, line, numTicks, numSamples); }
+    auto ToTuple() const noexcept { return std::tie(position, line); }
     friend bool operator<(ModPosition const& a, ModPosition const& b) noexcept { return a.ToTuple() < b.ToTuple(); }
 };
 
-Generator<ModPosition> ModPositionEnumerator(ModSong const& song, uint32_t sampleRate);
-Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_t sampleRate);
+struct ModPositionData
+{
+    ModPosition position;
+    uint32_t    pattern     = 0;
+    uint32_t    startTick   = 0;
+    uint64_t    startSample = 0;
+    uint32_t    numTicks    = 0;
+    uint32_t    numSamples  = 0;
 
-std::wstring RenderPosition(ModSong const& song, ModPosition const& modPosition);
+    friend bool operator<(ModPositionData const& a, ModPositionData const& b) noexcept { return a.position < b.position; }
+};
+
+struct ModFragment
+{
+    ModPositionData            position;
+    std::shared_ptr<IFragment> fragment;
+};
+
+Generator<ModPositionData> ModPositionEnumerator(ModSong const& song, uint32_t sampleRate);
+Generator<ModFragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_t sampleRate);
+
+std::wstring RenderPosition(ModSong const& song, ModPositionData const& modPosition);
 
 std::wstring GetNoteName(uint32_t const note);
 

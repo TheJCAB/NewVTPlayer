@@ -10,7 +10,7 @@
 namespace VTPlayerLib
 {
 
-Generator<ModPosition> ModPositionEnumerator(ModSong const& song, uint32_t sampleRate)
+Generator<ModPositionData> ModPositionEnumerator(ModSong const& song, uint32_t sampleRate)
 {
     uint64_t samplesPerMinute = (uint64_t{sampleRate} << 32) * 60;
 
@@ -20,8 +20,10 @@ Generator<ModPosition> ModPositionEnumerator(ModSong const& song, uint32_t sampl
     uint32_t position = 0;
     uint64_t tickPosition = 0;
     uint32_t nextDivision = 0;
+    uint32_t totalTicks = 0;
+    uint64_t totalSamples = 0;
 
-    std::set<ModPosition> visited;
+    std::set<ModPositionData> visited;
 
     while (position < song.Positions.size())
     {
@@ -86,14 +88,21 @@ Generator<ModPosition> ModPositionEnumerator(ModSong const& song, uint32_t sampl
             auto const sampleCount = static_cast<uint32_t>((tickPosition - oldTickPosition) >> 32);
             tickPosition -= uint64_t{sampleCount} << 32;
 
-            ModPosition const modPosition
+            ModPositionData const modPosition
             {
-                position,
-                pattern,
-                division,
-                ticks,
-                sampleCount,
+                .position {
+                    .position    = position,
+                    .line        = division,
+                },
+                .pattern     = pattern,
+                .startTick   = totalTicks,
+                .startSample = totalSamples,
+                .numTicks    = ticks,
+                .numSamples  = sampleCount,
             };
+
+            totalTicks   += ticks;
+            totalSamples += sampleCount;
 
             if (visited.find(modPosition) != visited.end())
             {
@@ -104,13 +113,16 @@ Generator<ModPosition> ModPositionEnumerator(ModSong const& song, uint32_t sampl
             visited.insert(modPosition);
 
             co_yield modPosition;
+
+            totalTicks   += ticks;
+            totalSamples += sampleCount;
         }
 
         position = nextPosition;
     }
 }
 
-Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_t sampleRate)
+Generator<ModFragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_t sampleRate)
 {
     double periodSpeed = (4.0 * 1024.0 * 1024.0 * 1024.0) * 7093789.2 * 256.0 / (sampleRate * 2);
 
@@ -128,17 +140,17 @@ Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_
 
     for (auto&& modPosition : ModPositionEnumerator(*song, sampleRate))
     {
-        if (modPosition.position != currentPosition || modPosition.line != currentLine + 1)
+        if (modPosition.position.position != currentPosition || modPosition.position.line != currentLine + 1)
         {
             auto const& patternData = song->Patterns[modPosition.pattern];
 
-            currentPosition = modPosition.position;
-            currentLine = modPosition.line;
+            currentPosition = modPosition.position.position;
+            currentLine = modPosition.position.line;
 
             for (uint32_t channel = 0; channel < song->NumChannels; ++channel)
             {
                 auto const& commands = patternData.ChannelCommands[channel];
-                auto const commandsBegin = std::lower_bound(commands.begin(), commands.end(), modPosition.line,
+                auto const commandsBegin = std::lower_bound(commands.begin(), commands.end(), modPosition.position.line,
                     [](auto const& a, uint32_t line){ return a.Division < line; }
                 );
 
@@ -161,7 +173,7 @@ Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_
         {
             for (auto& channel : channels)
             {
-                channel.Tick((uint32_t)modPosition.line, tick);
+                channel.Tick((uint32_t)modPosition.position.line, tick);
             }
 
             auto const oldTickPosition = tickPosition;
@@ -187,15 +199,15 @@ Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_
 
             if (mixChannels.empty())
             {
-                co_yield MakeSilenceFragment(sampleCount);
+                co_yield { modPosition, MakeSilenceFragment(sampleCount) };
             }
             else if (mixChannels.size() == 1)
             {
-                co_yield std::move(mixChannels[0]);
+                co_yield { modPosition, std::move(mixChannels[0]) };
             }
             else
             {
-                co_yield MakeMixFragment(std::move(mixChannels), sampleCount);
+                co_yield { modPosition, MakeMixFragment(std::move(mixChannels), sampleCount) };
             }
         }
 
@@ -222,7 +234,7 @@ Generator<Fragment> MixBufferEngine(std::shared_ptr<ModSong const> song, uint32_
 //    return timeline;
 //}
 
-Generator<std::pair<uint64_t, ModPosition>> RenderModPosition(ModSong song, int sampleRate)
+Generator<std::pair<uint64_t, ModPositionData>> RenderModPosition(ModSong song, int sampleRate)
 {
     uint64_t sample = 0;
 
@@ -284,7 +296,7 @@ std::wstring GetNoteName(uint32_t const note)
 //    result += buffer;
 //}
 
-std::wstring RenderPosition([[maybe_unused]] ModSong const& song, [[maybe_unused]] ModPosition const& modPosition)
+std::wstring RenderPosition([[maybe_unused]] ModSong const& song, [[maybe_unused]] ModPositionData const& modPosition)
 {
     wchar_t buffer[1024]{};
 

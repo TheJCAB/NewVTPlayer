@@ -5,6 +5,10 @@ var indices;
 
 var buttonEl;
 var modListEl = document.querySelector('#mod-list');
+var songTimeline = document.querySelector('#songTimeline');;
+var songPositionText = document.querySelector('#songPositionText');;
+var songTimePosition = document.querySelector('#songTimePosition');;
+var songLength = document.querySelector('#songLength');;
 var audioContext;
 
 const modFiles =
@@ -223,8 +227,17 @@ const modFiles =
 
 var modListElement;
 
-async function startMod(mod)
+var currentIndex = -1;
+
+async function startMod(index)
 {
+    if (index < 0)
+    {
+        return;
+    }
+
+    const mod = modFiles[index];
+
     if (vtPlayerWorker == undefined)
     {
         await startAudio();
@@ -232,6 +245,8 @@ async function startMod(mod)
 
     const response = await fetch("/MODs/" + mod);
     const buffer   = await response.arrayBuffer();
+
+    currentIndex = index;
 
     vtPlayerWorker.postMessage(buffer);
     const oldCount = Atomics.add(indices, 2, 1);
@@ -248,7 +263,7 @@ window.populateModList = (modListEl) =>
         modListElement.add(option, null);
     }
 
-    modListElement.addEventListener('change', async () => await startMod(modListElement.value), false);
+    modListElement.addEventListener('change', async () => await startMod(modListElement.selectedIndex), false);
 };
 
 window.startAudio = async () =>
@@ -280,9 +295,41 @@ window.startAudio = async () =>
 
     vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
     vtPlayerWorker.postMessage({ buffer: buffer, sampleRate: audioContext.sampleRate });
+    var resolveIsInitialized;
+    const isInitialized = new Promise(resolved => resolveIsInitialized = resolved);
+    vtPlayerWorker.onmessage = (event) =>
+    {
+        resolveIsInitialized(event);
+        vtPlayerWorker.onmessage = (event) =>
+        {
+            if ('position' in event.data)
+            {
+                console.log(event.data.position, ' ', event.data.line, ' ', event.data.percent);
+                songTimeline.value = event.data.percent;
+                {
+                    const minutes = Math.floor(event.data.seconds / 60);
+                    const secondsHi = Math.floor(event.data.seconds / 10) - minutes * 6;
+                    const secondsLo = Math.floor(event.data.seconds) - minutes * 60 - secondsHi * 10;
+                    songTimePosition.textContent = `${minutes}:${secondsHi}${secondsLo}`;
+                }
+                songPositionText.textContent = `${event.data.position}(${event.data.pattern})/${event.data.line}`;
+                {
+                    const minutes = Math.floor(event.data.totalSeconds / 60);
+                    const secondsHi = Math.floor(event.data.totalSeconds / 10) - minutes * 6;
+                    const secondsLo = Math.floor(event.data.totalSeconds) - minutes * 60 - secondsHi * 10;
+                    songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
+                }
+            }
+            if ('stop' in event.data)
+            {
+                modListElement.value = modFiles[currentIndex + 1];
+                startMod(currentIndex + 1);
+            }
+        }
+    }
 
     //await new Promise(resolve => { node.port.onmessage = (event) => { resolve(event); } });
-    await new Promise(resolve => { vtPlayerWorker.onmessage = (event) => { resolve(event); } });
+    await isInitialized;
 };
 
 window.initialize = async () =>
@@ -295,7 +342,7 @@ window.initialize = async () =>
         const index = Math.floor(Math.random() * modFiles.length);
     
         modListElement.value = modFiles[index];
-        startMod(modFiles[index]);
+        startMod(index);
 
         buttonEl.disabled = false;
         console.log('Random song: ', modFiles[index]);

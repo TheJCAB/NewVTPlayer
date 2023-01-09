@@ -47,6 +47,9 @@
         grid-row-start: 1;
         grid-row-end: 2;
 
+        display: grid;
+        grid-template-rows: 1fr 3em;
+
         border: 1px solid rgb(0, 0, 0);
         margin: 0px;
         padding: 0px;
@@ -68,6 +71,22 @@
         border: 1px solid rgb(0, 0, 0);
         margin: 0px;
       }
+      .helloText {
+        border: 1px solid rgb(0, 0, 0);
+      }
+      .songPositionDiv {
+        text-align: center;
+      }
+      .songTimeline {
+        display: block;
+        width: 100%;
+      }
+      .songTimePosition {
+        float: left;
+      }
+      .songLength {
+        float: right;
+      }
     </style>
   </head>
   <body>
@@ -81,6 +100,17 @@
         </div>
       </div>
       <div class="mainPane">
+        <div class="helloText">
+          <p>Hello! This is JCAB writing, and what you see is a new incarnation of my VTPlayer website.</p>
+        </div>
+        <div>
+          <div class="songPositionDiv">
+            <span class="songTimePosition" id="songTimePosition"></span>
+            <span id="songPositionText"><br></span>
+            <span class="songLength" id="songLength"></span>
+          </div>
+          <progress class="songTimeline" id="songTimeline" value="0" max="100"></progress>
+        </div>
       </div>
     </div>
 

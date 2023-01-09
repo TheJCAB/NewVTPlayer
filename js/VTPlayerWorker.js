@@ -1,6 +1,5 @@
 
 var VTPlayerModule;
-var memory;
 
 var malloc;
 var free;
@@ -9,6 +8,9 @@ var AllocateAudioBuffer;
 var FreeAudioBuffer;
 var VTPlayerLoadSongFromMemory;
 var VTPlayerGetAudio;
+
+var metadataBufferPtr;
+var metadataBuffer;
 
 var sharedBuffer;
 var sampleRate;
@@ -21,6 +23,8 @@ var bufferSizeInFloats;
 var bufferPtr         ;
 var vtPlayerBuffer    ;
 
+var lastPositionReported = {};
+
 function mainLoop()
 {
     while (Atomics.load(indices, 2) == 0)
@@ -29,13 +33,33 @@ function mainLoop()
         const tail = indices[1];
 
         const available = (tail + RingBufferSize - 1 - head) % (RingBufferSize);
-        if (available < bufferSizeInFloats)
+        if (available < 128)
         {
             Atomics.wait(indices, 1, tail);
         }
         else
         {
-            const filled = VTPlayerGetAudio(bufferPtr, bufferSizeInFloats);
+            const filled = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, 128), metadataBufferPtr);
+
+            //console.log(
+            //    metadataBuffer[0], ' ', // position
+            //    metadataBuffer[1], ' ', // line
+            //    metadataBuffer[2], ' ', // pattern
+            //    metadataBuffer[3], ' ', // tick
+            //    metadataBuffer[4], ' ', // totalTicks
+            //    metadataBuffer[5], ' ', // millisecond
+            //    metadataBuffer[6]       // totalMilliseconds
+            //);
+
+            if (filled == 0)
+            {
+                postMessage(
+                    {
+                        stop: true,
+                    }
+                );
+                break;
+            }
 
             if (head + filled <= RingBufferSize)
             {
@@ -48,6 +72,28 @@ function mainLoop()
                 ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize), head);
                 ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled));
                 Atomics.store(indices, 0, filled - firstSize);
+            }
+
+            const positionReported =
+            {
+                position: metadataBuffer[0],
+                line:     metadataBuffer[1],
+            };
+
+            if (positionReported.position != lastPositionReported.position ||
+                positionReported.line     != lastPositionReported.line)
+            {
+                postMessage(
+                    {
+                        position:     metadataBuffer[0],
+                        line:         metadataBuffer[1],
+                        pattern:      metadataBuffer[2],
+                        seconds:      metadataBuffer[5] / 1000.0,
+                        totalSeconds: metadataBuffer[6] / 1000.0,
+                        percent:      metadataBuffer[5] * 100.0 / metadataBuffer[6],
+                    }
+                );
+                lastPositionReported = positionReported;
             }
         }
     }
@@ -64,7 +110,7 @@ function processMessage(event)
     const buffer         = event.data;
     const modSizeInBytes = buffer.byteLength;
     const modPtr         = malloc(modSizeInBytes);
-    (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+    (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
     VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
     free(modPtr);
 
@@ -94,8 +140,6 @@ var onmessage = async (event) => {
     console.log(Object.keys(VTPlayerModule));
     console.log(VTPlayerModule._AllocateAudioBuffer);
 
-    memory = VTPlayerModule.asm.memory;
-
     malloc                      = VTPlayerModule._malloc                    ;
     free                        = VTPlayerModule._free                      ;
     AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
@@ -103,16 +147,19 @@ var onmessage = async (event) => {
     VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
     VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
 
-    bufferSizeInFloats = 128; //RingBufferSize / 4;
+    bufferSizeInFloats = RingBufferSize / 4;
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
-    vtPlayerBuffer     = new Float32Array(memory.buffer, bufferPtr, bufferSizeInFloats);
+    vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
+
+    metadataBufferPtr  = malloc(7 * 4);
+    metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 7);
 
     //{
     //    var response = await fetch("/MODs/S3M/ctgoblin.s3m");
     //    var buffer = await response.arrayBuffer();
     //    const modSizeInBytes = buffer.byteLength;
     //    const modPtr         = malloc(modSizeInBytes);
-    //    (new Uint8Array(memory.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+    //    (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
     //    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
     //    free(modPtr);
     //}
