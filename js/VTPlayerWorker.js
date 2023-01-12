@@ -27,19 +27,20 @@ var lastPositionReported = {};
 
 function mainLoop()
 {
+    console.log("Main loop");
     while (Atomics.load(indices, 2) == 0)
     {
-        var   head = indices[0];
+        const head = indices[0];
         const tail = indices[1];
 
-        const available = (tail + RingBufferSize - 1 - head) % (RingBufferSize);
-        if (available < 128)
+        const available = (tail + RingBufferSize - 1 - head) % RingBufferSize;
+        if (available <= 0)
         {
             Atomics.wait(indices, 1, tail);
         }
         else
         {
-            const filled = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, 128), metadataBufferPtr);
+            const filled = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, available), metadataBufferPtr);
 
             //console.log(
             //    metadataBuffer[0], ' ', // position
@@ -58,21 +59,22 @@ function mainLoop()
                         stop: true,
                     }
                 );
+                console.log("Song ended");
                 break;
             }
 
             if (head + filled <= RingBufferSize)
             {
                 ringBuffer.set(vtPlayerBuffer.subarray(0, filled), head);
-                Atomics.store(indices, 0, head + filled);
             }
             else
             {
                 const firstSize = RingBufferSize - head;
                 ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize), head);
                 ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled));
-                Atomics.store(indices, 0, filled - firstSize);
             }
+
+            Atomics.store(indices, 0, (head + filled) % RingBufferSize);
 
             const positionReported =
             {
@@ -97,12 +99,13 @@ function mainLoop()
             }
         }
     }
+    console.log("Main loop exit");
 }
 
 
 function processMessage(event)
 {
-    //console.log('Process message');
+    console.log('Process message');
 
     // TODO: Instead of putting the file in a WASM memory buffer,
     // we should look into putting it in the WASM filesystem.
@@ -115,7 +118,7 @@ function processMessage(event)
     free(modPtr);
 
     const oldCount = Atomics.sub(indices, 2, 1);
-    //console.log('count was ', oldCount);
+    console.log('count was ', oldCount);
     mainLoop();
 }
 

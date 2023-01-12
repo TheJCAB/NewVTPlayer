@@ -227,6 +227,7 @@ const modFiles =
 
 var modListElement;
 
+var playingRandom = false;
 var currentIndex = -1;
 
 async function startMod(index)
@@ -248,9 +249,9 @@ async function startMod(index)
 
     currentIndex = index;
 
-    vtPlayerWorker.postMessage(buffer);
     const oldCount = Atomics.add(indices, 2, 1);
-    //console.log('Count increased to ', oldCount + 1);
+    vtPlayerWorker.postMessage(buffer);
+    console.log('Count increased to ', oldCount + 1);
 };
 
 window.populateModList = (modListEl) =>
@@ -263,7 +264,13 @@ window.populateModList = (modListEl) =>
         modListElement.add(option, null);
     }
 
-    modListElement.addEventListener('change', async () => await startMod(modListElement.selectedIndex), false);
+    modListElement.addEventListener('change', async () =>
+        {
+            await startMod(modListElement.selectedIndex);
+            playingRandom = false;
+        },
+        false
+    );
 };
 
 window.startAudio = async () =>
@@ -322,8 +329,18 @@ window.startAudio = async () =>
             }
             if ('stop' in event.data)
             {
-                modListElement.value = modFiles[currentIndex + 1];
-                startMod(currentIndex + 1);
+                var index;
+                if (playingRandom)
+                {
+                    index = Math.floor(Math.random() * modFiles.length);
+                }
+                else
+                {
+                    index = currentIndex + 1;
+                }
+
+                modListElement.value = modFiles[index];
+                startMod(index);
             }
         }
     }
@@ -343,6 +360,7 @@ window.initialize = async () =>
     
         modListElement.value = modFiles[index];
         startMod(index);
+        playingRandom = true;
 
         buttonEl.disabled = false;
         console.log('Random song: ', modFiles[index]);

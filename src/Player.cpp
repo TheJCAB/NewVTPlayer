@@ -101,9 +101,6 @@ Generator<ModPositionData> ModPositionEnumerator(ModSong const& song, uint32_t s
                 .numSamples  = sampleCount,
             };
 
-            totalTicks   += ticks;
-            totalSamples += sampleCount;
-
             if (visited.find(modPosition) != visited.end())
             {
                 // Looping!
