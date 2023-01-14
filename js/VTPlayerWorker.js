@@ -16,8 +16,7 @@ var sharedBuffer;
 var sampleRate;
 var ringBuffer;
 var indices;
-
-var RingBufferSize;
+var ringSizeInFloats;
 
 var bufferSizeInFloats;
 var bufferPtr         ;
@@ -33,7 +32,7 @@ function mainLoop()
         const head = indices[0];
         const tail = indices[1];
 
-        const available = (tail + RingBufferSize - 1 - head) % RingBufferSize;
+        const available = (tail + ringSizeInFloats - 1 - head) % ringSizeInFloats;
         if (available <= 0)
         {
             Atomics.wait(indices, 1, tail);
@@ -63,18 +62,18 @@ function mainLoop()
                 break;
             }
 
-            if (head + filled <= RingBufferSize)
+            if (head + filled <= ringSizeInFloats)
             {
                 ringBuffer.set(vtPlayerBuffer.subarray(0, filled), head);
             }
             else
             {
-                const firstSize = RingBufferSize - head;
+                const firstSize = ringSizeInFloats - head;
                 ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize), head);
                 ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled));
             }
 
-            Atomics.store(indices, 0, (head + filled) % RingBufferSize);
+            Atomics.store(indices, 0, (head + filled) % ringSizeInFloats);
 
             const positionReported =
             {
@@ -103,73 +102,66 @@ function mainLoop()
 }
 
 
-function processMessage(event)
+async function processMessage(event)
 {
     console.log('Process message');
 
-    // TODO: Instead of putting the file in a WASM memory buffer,
-    // we should look into putting it in the WASM filesystem.
-    // That'd save some precious WASM memory.
-    const buffer         = event.data;
-    const modSizeInBytes = buffer.byteLength;
-    const modPtr         = malloc(modSizeInBytes);
-    (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
-    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
-    free(modPtr);
+    if ('buffer' in event.data)
+    {
+        sharedBuffer     = event.data.buffer;
+        ringSizeInFloats = event.data.ringSizeInFloats;
+        sampleRate       = event.data.sampleRate;
 
-    const oldCount = Atomics.sub(indices, 2, 1);
-    console.log('count was ', oldCount);
-    mainLoop();
-}
+        const indicesPosition = event.data.indicesPosition;
+        ringBuffer = new Float32Array(sharedBuffer, 0, ringSizeInFloats);
+        indices = new Int32Array(sharedBuffer, indicesPosition, 3);
 
-var onmessage = async (event) => {
+        const { default : createVTPlayer } = await import('/js/VTPlayer.js');
+        console.log(createVTPlayer);
 
-    const audioConstants = await import("./AudioConstants.js");
+        VTPlayerModule = await createVTPlayer();
+        // Unfortunately, Emscriptem replaces our onmessage handler, so we need to put it back.
+        // We don't want the main thread to be calling C++ functions directly,
+        // unless we at some point switch the C++ code itself to use a shared buffer.
+        // TODO: Explore Emscriptem's support for pthreads and shared buffers for the heap.
+        onmessage = processMessage;
 
-    RingBufferSize = audioConstants.RingBufferSize;
+        console.log(VTPlayerModule);
+        console.log(Object.keys(VTPlayerModule));
+        console.log(VTPlayerModule._AllocateAudioBuffer);
 
-    sharedBuffer = event.data.buffer;
-    sampleRate = event.data.sampleRate;
-    ringBuffer = new Float32Array(sharedBuffer, 0, RingBufferSize);
-    indices = new Int32Array(sharedBuffer, RingBufferSize * 4, 3);
+        malloc                      = VTPlayerModule._malloc                    ;
+        free                        = VTPlayerModule._free                      ;
+        AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
+        FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
+        VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
+        VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
 
-    const { default : createVTPlayer } = await import('/js/VTPlayer.js');
+        bufferSizeInFloats = ringSizeInFloats / 4;
+        bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
+        vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
 
-    console.log(createVTPlayer);
+        metadataBufferPtr  = malloc(7 * 4);
+        metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 7);
 
-    VTPlayerModule = await createVTPlayer();
+        postMessage(0);
+    }
+    if ('modBuffer' in event.data)
+    {
+        // TODO: Instead of putting the file in a WASM memory buffer,
+        // we should look into putting it in the WASM filesystem.
+        // That'd save some precious WASM memory.
+        const buffer         = event.data.modBuffer;
+        const modSizeInBytes = buffer.byteLength;
+        const modPtr         = malloc(modSizeInBytes);
+        (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+        VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
+        free(modPtr);
 
-    console.log(VTPlayerModule);
-    console.log(Object.keys(VTPlayerModule));
-    console.log(VTPlayerModule._AllocateAudioBuffer);
-
-    malloc                      = VTPlayerModule._malloc                    ;
-    free                        = VTPlayerModule._free                      ;
-    AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
-    FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
-    VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
-    VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
-
-    bufferSizeInFloats = RingBufferSize / 4;
-    bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
-    vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
-
-    metadataBufferPtr  = malloc(7 * 4);
-    metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 7);
-
-    //{
-    //    var response = await fetch("/MODs/S3M/ctgoblin.s3m");
-    //    var buffer = await response.arrayBuffer();
-    //    const modSizeInBytes = buffer.byteLength;
-    //    const modPtr         = malloc(modSizeInBytes);
-    //    (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
-    //    VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
-    //    free(modPtr);
-    //}
-
-    onmessage = processMessage;
-
-    postMessage(0);
-
-    //mainLoop();
+        const oldCount = Atomics.sub(indices, 2, 1);
+        console.log('count was ', oldCount);
+        mainLoop();
+    }
 };
+
+var onmessage = processMessage;

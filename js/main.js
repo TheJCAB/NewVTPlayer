@@ -250,7 +250,9 @@ async function startMod(index)
     currentIndex = index;
 
     const oldCount = Atomics.add(indices, 2, 1);
-    vtPlayerWorker.postMessage(buffer);
+    vtPlayerWorker.postMessage({
+        modBuffer: buffer,
+    });
     console.log('Count increased to ', oldCount + 1);
 };
 
@@ -287,9 +289,12 @@ window.startAudio = async () =>
 
     console.log(crossOriginIsolated);
 
-    const buffer = new SharedArrayBuffer(RingBufferSize * 4 + 3 * 4);
+    const ringSizeInFloats = audioContext.sampleRate;
+    const indicesPosition  = ringSizeInFloats * 4;
 
-    indices = new Int32Array(buffer, RingBufferSize * 4, 3);
+    const buffer = new SharedArrayBuffer(indicesPosition + 3 * 4);
+
+    indices = new Int32Array(buffer, indicesPosition, 3);
     indices[0] = 0;    // Worker-controlled head
     indices[1] = 0;    // Processor-controlled tail
     indices[2] = 0;    // Posted message count
@@ -297,11 +302,20 @@ window.startAudio = async () =>
     await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
 
     let node = new AudioWorkletNode(audioContext, 'VTPlayerAudioWorklet');
-    node.port.postMessage(buffer);
+    node.port.postMessage({
+        buffer:           buffer,
+        ringSizeInFloats: ringSizeInFloats,
+        indicesPosition:  indicesPosition,
+    });
     node.connect(audioContext.destination);
 
     vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
-    vtPlayerWorker.postMessage({ buffer: buffer, sampleRate: audioContext.sampleRate });
+    vtPlayerWorker.postMessage({
+        buffer:           buffer,
+        ringSizeInFloats: ringSizeInFloats,
+        indicesPosition:  indicesPosition,
+        sampleRate:       audioContext.sampleRate,
+    });
     var resolveIsInitialized;
     const isInitialized = new Promise(resolved => resolveIsInitialized = resolved);
     vtPlayerWorker.onmessage = (event) =>
