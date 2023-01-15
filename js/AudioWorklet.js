@@ -1,3 +1,4 @@
+import { SharedCommunication } from "./SharedCommunicationBuffer.js"
 
 
 class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
@@ -9,15 +10,8 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
     }
 
     // Initializes upon the event from the worker backend.
-    _initialize(initData) {
-        const sharedBuffer     = initData.data.buffer;
-        this._ringSizeInFloats = initData.data.ringSizeInFloats;
-        const indicesPosition  = initData.data.indicesPosition;
-
-        this._indices = new Int32Array(sharedBuffer, indicesPosition, 3);
-
-        // Worker's output buffer, mono. TODO: Stereo.
-        this._ringBuffer = new Float32Array(sharedBuffer, 0, this._ringSizeInFloats);
+    async _initialize(initData) {
+        this._sharedCommunicationBuffer = new SharedCommunication(initData.data.sharedCommunicationBuffer);
 
         this._isInitialized = true;
         //this.port.postMessage({});
@@ -31,11 +25,10 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
         // For now this is only mono channel.
         const outputChannelData = outputs[0][0];
 
-        const head = this._indices[0];
-        var   tail = this._indices[1];
+        var ring = this._sharedCommunicationBuffer.getRingBufferSnapshot();
 
-        const available = (head + this._ringSizeInFloats - tail) % (this._ringSizeInFloats);
-        if (available < 128)
+        const filled = ring.ringBufferFilled;
+        if (filled < outputChannelData.length)
         {
             // We don't have enough data, so silence it is.
             // TODO: to avoid jitter, we should now wait until the buffer is full before we start draining it again.
@@ -43,19 +36,11 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        if (tail + 128 <= this._ringSizeInFloats)
-        {
-            outputChannelData.set(this._ringBuffer.subarray(tail, tail + 128));
-        }
-        else
-        {
-            const firstSize = this._ringSizeInFloats - tail;
-            outputChannelData.set(this._ringBuffer.subarray(tail, tail + firstSize));
-            outputChannelData.set(this._ringBuffer.subarray(0, 128 - firstSize), firstSize);
-        }
+        ring.emptyTo(outputChannelData);
 
-        Atomics.store(this._indices, 1, (tail + 128) % (this._ringSizeInFloats));
-        Atomics.notify(this._indices, 1);
+        this._sharedCommunicationBuffer
+
+        ring.commitEmptied();
 
         return true;
     }

@@ -14,9 +14,11 @@ var metadataBuffer;
 
 var sharedBuffer;
 var sampleRate;
-var ringBuffer;
-var indices;
-var ringSizeInFloats;
+
+var sharedCommunicationBuffer;
+//var ringBuffer;
+//var indices;
+//var ringSizeInFloats;
 
 var bufferSizeInFloats;
 var bufferPtr         ;
@@ -27,19 +29,18 @@ var lastPositionReported = {};
 function mainLoop()
 {
     console.log("Main loop");
-    while (Atomics.load(indices, 2) == 0)
+    while (!sharedCommunicationBuffer.areWorkerMessagesPending())
     {
-        const head = indices[0];
-        const tail = indices[1];
+        var ring = sharedCommunicationBuffer.getRingBufferSnapshot();
 
-        const available = (tail + ringSizeInFloats - 1 - head) % ringSizeInFloats;
+        const available = ring.ringBufferAvailable;
         if (available <= 0)
         {
-            Atomics.wait(indices, 1, tail);
+            sharedCommunicationBuffer.waitRingBufferTail();
         }
         else
         {
-            const filled = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, available), metadataBufferPtr);
+            const sampleCount = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, available), metadataBufferPtr);
 
             //console.log(
             //    metadataBuffer[0], ' ', // position
@@ -51,7 +52,7 @@ function mainLoop()
             //    metadataBuffer[6]       // totalMilliseconds
             //);
 
-            if (filled == 0)
+            if (sampleCount == 0)
             {
                 postMessage(
                     {
@@ -62,18 +63,8 @@ function mainLoop()
                 break;
             }
 
-            if (head + filled <= ringSizeInFloats)
-            {
-                ringBuffer.set(vtPlayerBuffer.subarray(0, filled), head);
-            }
-            else
-            {
-                const firstSize = ringSizeInFloats - head;
-                ringBuffer.set(vtPlayerBuffer.subarray(0, firstSize), head);
-                ringBuffer.set(vtPlayerBuffer.subarray(firstSize, filled));
-            }
-
-            Atomics.store(indices, 0, (head + filled) % ringSizeInFloats);
+            ring.fillFrom(vtPlayerBuffer.subarray(0, sampleCount));
+            ring.commitFilled()
 
             const positionReported =
             {
@@ -106,15 +97,12 @@ async function processMessage(event)
 {
     console.log('Process message');
 
-    if ('buffer' in event.data)
+    if ('sharedCommunicationBuffer' in event.data)
     {
-        sharedBuffer     = event.data.buffer;
-        ringSizeInFloats = event.data.ringSizeInFloats;
-        sampleRate       = event.data.sampleRate;
+        const SharedCommunicationModule = await import("./SharedCommunicationBuffer.js");
 
-        const indicesPosition = event.data.indicesPosition;
-        ringBuffer = new Float32Array(sharedBuffer, 0, ringSizeInFloats);
-        indices = new Int32Array(sharedBuffer, indicesPosition, 3);
+        sharedCommunicationBuffer = sharedCommunicationBuffer = new SharedCommunicationModule.SharedCommunication(event.data.sharedCommunicationBuffer);
+        sampleRate = event.data.sampleRate;
 
         const { default : createVTPlayer } = await import('/js/VTPlayer.js');
         console.log(createVTPlayer);
@@ -137,7 +125,7 @@ async function processMessage(event)
         VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
         VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
 
-        bufferSizeInFloats = ringSizeInFloats / 4;
+        bufferSizeInFloats = sharedCommunicationBuffer.RingSizeInFloats / 4;
         bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
         vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
 
@@ -158,8 +146,8 @@ async function processMessage(event)
         VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
         free(modPtr);
 
-        const oldCount = Atomics.sub(indices, 2, 1);
-        console.log('count was ', oldCount);
+        const oldCount = sharedCommunicationBuffer.handledWorkerMessage();
+        console.log('Worker handlerd message. Old count was ', oldCount);
         mainLoop();
     }
 };

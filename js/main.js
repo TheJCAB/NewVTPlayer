@@ -1,7 +1,7 @@
 
 var vtPlayerWorker;
 
-var indices;
+var sharedCommunication;
 
 var buttonEl;
 var modListEl = document.querySelector('#mod-list');
@@ -249,11 +249,11 @@ async function startMod(index)
 
     currentIndex = index;
 
-    const oldCount = Atomics.add(indices, 2, 1);
+    const oldCount = sharedCommunication.postingWorkerMessage();
     vtPlayerWorker.postMessage({
         modBuffer: buffer,
     });
-    console.log('Count increased to ', oldCount + 1);
+    console.log('Worker message posted. New count ', oldCount + 1);
 };
 
 window.populateModList = (modListEl) =>
@@ -283,38 +283,25 @@ window.startAudio = async () =>
         audioContext.resume();
     }
 
-    const audioConstants = await import("./AudioConstants.js");
-
-    const RingBufferSize = audioConstants.RingBufferSize;
+    const SharedCommunicationModule = await import("./SharedCommunicationBuffer.js");
 
     console.log(crossOriginIsolated);
 
-    const ringSizeInFloats = audioContext.sampleRate;
-    const indicesPosition  = ringSizeInFloats * 4;
-
-    const buffer = new SharedArrayBuffer(indicesPosition + 3 * 4);
-
-    indices = new Int32Array(buffer, indicesPosition, 3);
-    indices[0] = 0;    // Worker-controlled head
-    indices[1] = 0;    // Processor-controlled tail
-    indices[2] = 0;    // Posted message count
+    const buffer = SharedCommunicationModule.initializeSharedBuffer(audioContext.sampleRate);
+    sharedCommunication = new SharedCommunicationModule.SharedCommunication(buffer);
 
     await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
 
     let node = new AudioWorkletNode(audioContext, 'VTPlayerAudioWorklet');
     node.port.postMessage({
-        buffer:           buffer,
-        ringSizeInFloats: ringSizeInFloats,
-        indicesPosition:  indicesPosition,
+        sharedCommunicationBuffer: buffer,
     });
     node.connect(audioContext.destination);
 
     vtPlayerWorker = new Worker('/js/VTPlayerWorker.js');
     vtPlayerWorker.postMessage({
-        buffer:           buffer,
-        ringSizeInFloats: ringSizeInFloats,
-        indicesPosition:  indicesPosition,
-        sampleRate:       audioContext.sampleRate,
+        sharedCommunicationBuffer: buffer,
+        sampleRate:                audioContext.sampleRate,
     });
     var resolveIsInitialized;
     const isInitialized = new Promise(resolved => resolveIsInitialized = resolved);
