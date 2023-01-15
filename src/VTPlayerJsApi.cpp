@@ -11,14 +11,33 @@ uint32_t                                  sampleRate;
 
 std::shared_ptr<VTPlayerLib::ModSong>     song;
 std::vector<VTPlayerLib::ModPositionData> songPositions;
-uint32_t                                  songTicks;
-uint32_t                                  songMilliseconds;
+
+struct SongData
+{
+    uint32_t SongTicks;
+    uint32_t SongMilliseconds;
+};
+
+SongData songData{};
 
 Generator<VTPlayerLib::ModFragment> player;
 Generator<VTPlayerLib::ModFragment>::iterator playerIt;
 VTPlayerLib::Fragment playerFragment;
 VTPlayerLib::ModPositionData playerFragmentPos;
 uint64_t playerFragmentLeft = 0;
+
+struct GetAudioMetadata
+{
+    uint32_t position    = UINT32_MAX;
+    uint32_t line        = UINT32_MAX;
+    uint32_t pattern     = UINT32_MAX;
+    uint32_t millisecond = UINT32_MAX;
+
+    friend bool operator==(GetAudioMetadata, GetAudioMetadata) = default;
+};
+
+GetAudioMetadata playerCurrentMetadata;
+uint64_t playerCurrentSample = 0;
 
 extern "C" EMSCRIPTEN_KEEPALIVE float* AllocateAudioBuffer(int sizeInFloats)
 {
@@ -58,24 +77,21 @@ extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerLoadSongFromMemory(void const* buff
     }
 
     auto const& lastPosition = songPositions.back();
-    songTicks = lastPosition.startTick + lastPosition.numTicks;
+    songData.SongTicks = lastPosition.startTick + lastPosition.numTicks;
     auto const songSamples = lastPosition.startSample + lastPosition.numSamples;
-    songMilliseconds = static_cast<uint32_t>(songSamples * 1000.0 / sampleRate);
+    songData.SongMilliseconds = static_cast<uint32_t>(songSamples * 1000.0 / sampleRate);
 
     player             = MixBufferEngine(song, static_cast<uint32_t>(sampleRate));
     playerIt           = player.begin();
+
+    playerCurrentMetadata = GetAudioMetadata{};
+    playerCurrentSample = 0;
 }
 
-struct GetAudioMetadata
+extern "C" EMSCRIPTEN_KEEPALIVE SongData* VTPlayerGetSongData()
 {
-    uint32_t position;
-    uint32_t line;
-    uint32_t pattern;
-    uint32_t tick;
-    uint32_t totalTicks;
-    uint32_t millisecond;
-    uint32_t totalMilliseconds;
-};
+    return &songData;
+}
 
 extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFloats, GetAudioMetadata* pMetadata)
 {
@@ -94,23 +110,23 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
         playerFragment     = playerIt->fragment;
         playerFragmentPos  = playerIt->position;
         playerFragmentLeft = playerFragment->GetCount();
+        playerCurrentMetadata.position    = playerFragmentPos.position.position;
+        playerCurrentMetadata.line        = playerFragmentPos.position.line;
+        playerCurrentMetadata.pattern     = playerFragmentPos.pattern;
+        playerCurrentSample = playerFragmentPos.startSample;
         playerIt++;
     }
+
+    *pMetadata = playerCurrentMetadata;
+    pMetadata->millisecond = static_cast<uint32_t>(playerCurrentSample * 1000.0 / sampleRate);
 
     auto const fragmentPos = playerFragment->GetCount() - playerFragmentLeft;
     auto const count = std::min<uint64_t>(playerFragmentLeft, sizeInFloats);
 
     playerFragment->MixMono(std::span{ buffer, static_cast<size_t>(count) }, fragmentPos, true);
 
-    playerFragmentLeft -= count;
-
-    pMetadata->position          = playerFragmentPos.position.position;
-    pMetadata->line              = playerFragmentPos.position.line;
-    pMetadata->pattern           = playerFragmentPos.pattern;
-    pMetadata->tick              = playerFragmentPos.startTick;
-    pMetadata->totalTicks        = songTicks;
-    pMetadata->millisecond       = static_cast<uint32_t>(playerFragmentPos.startSample * 1000.0 / sampleRate);
-    pMetadata->totalMilliseconds = songMilliseconds;
+    playerCurrentSample += count;
+    playerFragmentLeft  -= count;
 
     return static_cast<int>(count);
 }

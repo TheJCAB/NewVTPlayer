@@ -109,6 +109,11 @@ export class RingBufferSnapshot
         return this.RingSizeInFloats - this.ringBufferFilled - 1;
     }
 
+    isIndexFilled(index)
+    {
+        return (index + this.RingSizeInFloats - this.tail) % (this.RingSizeInFloats) <= this.ringBufferFilled;
+    }
+
     fillFrom(samples)
     {
         const newHead = this.head + samples.length;
