@@ -319,8 +319,8 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
 
     song->Title = s.ReadOEMString(28);
 
-    wprintf(L"Marker: %ls\n", song->Marker.c_str());
-    wprintf(L"Name: %ls\n", song->Title.c_str());
+    //wprintf(L"Marker: %ls\n", song->Marker.c_str());
+    //wprintf(L"Name: %ls\n", song->Title.c_str());
 
     if (song->Marker != L"SCRM")
     {
@@ -329,7 +329,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
 
     s.ReadType<uint8_t>(); // 0x1a
     auto const type = s.ReadType<uint8_t>();
-    wprintf(L"Type: %u\n", type);
+    //wprintf(L"Type: %u\n", type);
     s.Seek(2, SeekOrigin::Current);
 
     uint32_t const ordNum = s.ReadType<uint16_t>();
@@ -339,12 +339,12 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
     uint32_t const cwtv = s.ReadType<uint16_t>();
     uint32_t const ffv = s.ReadType<uint16_t>();
 
-    wprintf(L"ordNum: %4u\n", ordNum);
-    wprintf(L"insNum: %4u\n", insNum);
-    wprintf(L"patNum: %4u\n", patNum);
-    wprintf(L"flags:  %4X\n", flags);
-    wprintf(L"cwtv:   %4X\n", cwtv);
-    wprintf(L"ffv:    %4X\n", ffv);
+    //wprintf(L"ordNum: %4u\n", ordNum);
+    //wprintf(L"insNum: %4u\n", insNum);
+    //wprintf(L"patNum: %4u\n", patNum);
+    //wprintf(L"flags:  %4X\n", flags);
+    //wprintf(L"cwtv:   %4X\n", cwtv);
+    //wprintf(L"ffv:    %4X\n", ffv);
 
     s.Seek(4, SeekOrigin::Current); // Marker
 
@@ -404,7 +404,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
         }
     }
 
-    wprintf(L"NumChannels: %u\n", song->NumChannels);
+    //wprintf(L"NumChannels: %u\n", song->NumChannels);
 
     int patIndex = 0;
     for (auto offset : patternOffsets)
@@ -584,10 +584,10 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
             s.Seek(47, SeekOrigin::Current);
             infoString += s.ReadOEMString(28) + L"\n";
 
-            wprintf(L"Instrument %2u: %-28ls (none)\n",
-                static_cast<uint32_t>(song->Samples.size() + 1),
-                sample.Name.c_str()
-            );
+            //wprintf(L"Instrument %2u: %-28ls (none)\n",
+            //    static_cast<uint32_t>(song->Samples.size() + 1),
+            //    sample.Name.c_str()
+            //);
         }
         else
         {
@@ -633,15 +633,15 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                 }
                 auto const sampleLengthWithPad = sampleLength + 1;
 
-                wprintf(L"Instrument %2u: %-28ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
-                    static_cast<uint32_t>(song->Samples.size() + 1),
-                    sampleInfo.c_str(),
-                    sampleLength,
-                    sample.FineTune,
-                    sample.Volume,
-                    sampleLoopStart,
-                    sample.LoopLength
-                );
+                //wprintf(L"Instrument %2u: %-28ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
+                //    static_cast<uint32_t>(song->Samples.size() + 1),
+                //    sampleInfo.c_str(),
+                //    sampleLength,
+                //    sample.FineTune,
+                //    sample.Volume,
+                //    sampleLoopStart,
+                //    sample.LoopLength
+                //);
 
                 s.Seek(soffset, SeekOrigin::Begin);
                 sample.PCM = std::make_shared<std::vector<float>>();

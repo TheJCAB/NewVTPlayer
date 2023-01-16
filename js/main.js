@@ -19,7 +19,7 @@ var playerNextButton        = document.querySelector('#playerNextButton');
 
 var audioContext;
 
-var paused = true;
+var isPaused = true;
 
 const modFiles =
 [
@@ -244,8 +244,7 @@ async function startMod(index)
 {
     if (index < 0)
     {
-        playerPlayStopButton.innerHTML = '&#9654;&#65039;';
-        paused = true;
+        await pauseAudio();
         return;
     }
 
@@ -256,19 +255,13 @@ async function startMod(index)
         await startAudio();
     }
 
-    const response = await fetch("/MODs/" + mod);
-    const buffer   = await response.arrayBuffer();
-
     currentIndex = index;
 
-    const oldCount = sharedCommunication.postingWorkerMessage();
     vtPlayerWorker.postMessage({
-        modBuffer: buffer,
+        modUrl: "/MODs/" + mod,
     });
-    console.log('Worker message posted. New count ', oldCount + 1);
 
-    playerPlayStopButton.innerHTML = '&#9208;&#65039;';
-    paused = false;
+    await resumeAudio();
 };
 
 window.populateModList = (modListEl) =>
@@ -327,7 +320,7 @@ window.startAudio = async () =>
         {
             if ('position' in event.data)
             {
-                console.log(event.data.position, ' ', event.data.line, ' ', event.data.percent);
+                //console.log(event.data.position, ' ', event.data.line, ' ', event.data.percent);
                 songTimeline.value = event.data.percent;
                 {
                     const minutes = Math.floor(event.data.seconds / 60);
@@ -343,7 +336,7 @@ window.startAudio = async () =>
                     songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
             }
-            if ('stop' in event.data)
+            if ('songEnded' in event.data)
             {
                 var index;
                 if (playingRandom)
@@ -364,7 +357,7 @@ window.startAudio = async () =>
     //await new Promise(resolve => { node.port.onmessage = (event) => { resolve(event); } });
     await isInitialized;
 
-    paused = false;
+    isPaused = false;
     playerPlayStopButton.addEventListener('click', onPauseResume, false);
     sharedCommunication.requestStartOutput();
 };
@@ -383,20 +376,24 @@ async function onStartRandomSong()
     console.log('Random song: ', modFiles[index]);
 };
 
-async function onPauseResume()
+async function resumeAudio()
 {
-    if (paused)
-    {
-        await sharedCommunication.requestStartOutput();
-        playerPlayStopButton.innerHTML = '&#9208;&#65039;';
-        paused = false;
-    }
-    else
-    {
+    await sharedCommunication.requestStartOutput();
+    playerPlayStopButton.innerHTML = '&#9208;&#65039;';
+    isPaused = false;
+}
+
+async function pauseAudio()
+{
         await sharedCommunication.requestStopOutput();
         playerPlayStopButton.innerHTML = '&#9654;&#65039;';
-        paused = true;
-    }
+        isPaused = true;
+}
+
+
+async function onPauseResume()
+{
+    await isPaused ? resumeAudio() : pauseAudio();
 };
 
 window.initialize = async () =>

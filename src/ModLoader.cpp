@@ -280,8 +280,8 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
 
     song->Title = s.ReadOEMString(20);
 
-    wprintf(L"Marker: %ls\n", song->Marker.c_str());
-    wprintf(L"Name: %ls\n", song->Title.c_str());
+    //wprintf(L"Marker: %ls\n", song->Marker.c_str());
+    //wprintf(L"Name: %ls\n", song->Title.c_str());
 
     uint16_t numSamples = 0;
     uint16_t numChannels = 0;
@@ -336,8 +336,8 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
     uint32_t numPositions = s.ReadType<uint8_t>();
     uint32_t repeat = s.ReadType<uint8_t>();
 
-    wprintf(L"Positions: %u\n", numPositions);
-    wprintf(L"127 repeat: %u\n", repeat);
+    //wprintf(L"Positions: %u\n", numPositions);
+    //wprintf(L"127 repeat: %u\n", repeat);
 
     uint32_t numPatterns = 0;
 
@@ -524,15 +524,15 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                     sample.FineTune = (float)pow(2, -(1 / 96.0) * (((int)finetune & 15) - 16));
                 }
 
-                wprintf(L"Instrument %2u: %-22ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
-                    sampleIndex + 1,
-                    sample.Name.c_str(),
-                    length,
-                    sample.FineTune,
-                    sample.Volume,
-                    loopStart,
-                    sample.LoopLength
-                );
+                //wprintf(L"Instrument %2u: %-22ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
+                //    sampleIndex + 1,
+                //    sample.Name.c_str(),
+                //    length,
+                //    sample.FineTune,
+                //    sample.Volume,
+                //    loopStart,
+                //    sample.LoopLength
+                //);
 
                 s.Seek(dataPosition, SeekOrigin::Begin);
 
@@ -576,10 +576,10 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
             }
             else
             {
-                wprintf(L"Instrument %2u: %-22ls (none)\n",
-                    sampleIndex + 1,
-                    name.c_str()
-                );
+                //wprintf(L"Instrument %2u: %-22ls (none)\n",
+                //    sampleIndex + 1,
+                //    name.c_str()
+                //);
 
                 song->Samples.push_back({});
             }

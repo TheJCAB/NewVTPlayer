@@ -2,10 +2,9 @@
 const MetaSlot = Object.freeze({
     RingBufferHead    : 0,
     RingBufferTail    : 1,
-    WorkerMessageCount: 2,
-    OutputState       : 3,
+    OutputState       : 2,
 });
-const MetaBufferSize  = 4;
+const MetaBufferSize  = 3;
 
 export const OutputState = Object.freeze({
     Stopped      : 0,
@@ -23,7 +22,6 @@ export function initializeSharedBuffer(ringSizeInFloats)
 
     meta[MetaSlot.RingBufferHead    ] = 0;    // Worker-controlled head
     meta[MetaSlot.RingBufferTail    ] = 0;    // Processor-controlled tail
-    meta[MetaSlot.WorkerMessageCount] = 0;    // Posted message count
     meta[MetaSlot.OutputState       ] = OutputState.Stopped;
 
     return {
@@ -42,9 +40,18 @@ export class SharedCommunication
         this._meta       = new Int32Array(this._bufferData.buffer, this._bufferData.metaPosition, MetaBufferSize);
     }
 
-    postingWorkerMessage    () { return Atomics.add (this._meta, MetaSlot.WorkerMessageCount, 1); }
-    handledWorkerMessage    () { return Atomics.sub (this._meta, MetaSlot.WorkerMessageCount, 1); }
-    areWorkerMessagesPending() { return Atomics.load(this._meta, MetaSlot.WorkerMessageCount) > 0; }
+    _waitAsyncSlot(metaSlot, expected)
+    {
+        const result = Atomics.waitAsync(this._meta, metaSlot, expected);
+        if (result.async)
+        {
+            return result.value;
+        }
+        else
+        {
+            return Promise.resolve(result.value);
+        }
+    }
 
     get RingSizeInFloats() { return this._ringBuffer.length; }
 
@@ -57,7 +64,7 @@ export class SharedCommunication
     set ringBufferTail(newTail) { return Atomics.store(this._meta, MetaSlot.RingBufferTail, newTail % this.RingSizeInFloats); }
 
     notifyRingBufferTail()     { return Atomics.notify(this._meta, MetaSlot.RingBufferTail, 1); }
-    waitRingBufferTail  (head) { return Atomics.wait  (this._meta, MetaSlot.RingBufferTail, head); }
+    waitRingBufferTail  (tail) { return this._waitAsyncSlot(MetaSlot.RingBufferTail, tail); }
 
     get outputState() { return Atomics.load(this._meta, MetaSlot.OutputState); }
     async requestStopOutput()
@@ -78,7 +85,7 @@ export class SharedCommunication
             case OutputState.StopRequested:
                 break;
         }
-        await Atomics.waitAsync(this._meta, MetaSlot.OutputState, OutputState.StopRequested);
+        await this._waitAsyncSlot(MetaSlot.OutputState, OutputState.StopRequested);
     }
     async completeStopOutput()
     {

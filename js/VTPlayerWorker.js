@@ -38,112 +38,122 @@ var vtPlayerBuffer    ;
 // Total lengh of the song.
 var songTotalMilliseconds;
 
-function mainLoop()
+async function mainLoop()
 {
     console.log("Main loop");
-    while (!sharedCommunicationBuffer.areWorkerMessagesPending())
+    var songEnded = true;
+    while (true)
     {
         var ring = sharedCommunicationBuffer.getRingBufferSnapshot();
 
-        const available = ring.ringBufferAvailable;
-        if (available <= 0)
+        var available = ring.ringBufferAvailable;
+        while (available <= sampleRate / 100)
         {
-            sharedCommunicationBuffer.waitRingBufferTail();
+            await sharedCommunicationBuffer.waitRingBufferTail(ring.tail);
+            ring = sharedCommunicationBuffer.getRingBufferSnapshot();
+            available = ring.ringBufferAvailable;
         }
-        else
+
+        const sampleCount = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, available), metadataBufferPtr);
+
+        //console.log(
+        //    metadataBuffer[0], ' ', // position
+        //    metadataBuffer[1], ' ', // line
+        //    metadataBuffer[2], ' ', // pattern
+        //    metadataBuffer[3], ' ', // millisecond
+        //);
+
+        if (sampleCount == 0)
         {
-            const sampleCount = VTPlayerGetAudio(bufferPtr, Math.min(bufferSizeInFloats, available), metadataBufferPtr);
-
-            //console.log(
-            //    metadataBuffer[0], ' ', // position
-            //    metadataBuffer[1], ' ', // line
-            //    metadataBuffer[2], ' ', // pattern
-            //    metadataBuffer[3], ' ', // millisecond
-            //);
-
-            if (sampleCount == 0)
+            if (!songEnded)
             {
                 postMessage(
                     {
-                        stop: true,
+                        songEnded: true,
                     }
                 );
                 console.log("Song ended");
-                break;
+                songEnded = true;
             }
+            await new Promise(resolve => { setTimeout(resolve, 10); });
+            continue;
+            //break;
+        }
 
-            const head = ring.head;
+        songEnded = false;
 
-            const pos =
+        const head = ring.head;
+
+        const pos =
+        {
+            head:         head,
+            position:     metadataBuffer[0],
+            line:         metadataBuffer[1],
+            pattern:      metadataBuffer[2],
+            seconds:      Math.trunc(metadataBuffer[3] / 1000),
+            totalSeconds: Math.trunc(songTotalMilliseconds / 1000),
+            percent:      metadataBuffer[3] * 100.0 / songTotalMilliseconds,
+        };
+
+        if (positionQueue.length > 0)
+        {
+            var prev = positionQueue.at(-1);
+            if (prev.position == pos.position &&
+                prev.line     == pos.line     &&
+                prev.seconds  == pos.seconds)
             {
-                head:         head,
-                position:     metadataBuffer[0],
-                line:         metadataBuffer[1],
-                pattern:      metadataBuffer[2],
-                seconds:      Math.trunc(metadataBuffer[3] / 1000),
-                totalSeconds: Math.trunc(songTotalMilliseconds / 1000),
-                percent:      metadataBuffer[3] * 100.0 / songTotalMilliseconds,
-            };
-
-            if (positionQueue.length > 0)
-            {
-                var prev = positionQueue.at(-1);
-                if (prev.position == pos.position &&
-                    prev.line     == pos.line     &&
-                    prev.seconds  == pos.seconds)
-                {
-                    prev.head = pos.head;
-                    // And we're done.
-                }
-                else
-                {
-                    positionQueue.push(pos);
-                }
+                prev.head = pos.head;
+                // And we're done.
             }
             else
             {
                 positionQueue.push(pos);
             }
-
-            var i = 0;
-            while (i + 1 < positionQueue.length && !ring.isIndexFilled(positionQueue[i].head))
-            {
-                ++i;
-            }
-            if (i > 0)
-            {
-                positionQueue.splice(0, i);
-            }
-
-            const positionReported =
-            {
-                position: positionQueue[0].position,
-                line:     positionQueue[0].line,
-                seconds:  positionQueue[0].seconds,
-            };
-
-            if (positionReported.position != lastPositionReported.position ||
-                positionReported.line     != lastPositionReported.line     ||
-                positionReported.seconds  != lastPositionReported.seconds)
-            {
-                postMessage(
-                    {
-                        position:     positionQueue[0].position,
-                        line:         positionQueue[0].line,
-                        pattern:      positionQueue[0].pattern,
-                        seconds:      positionQueue[0].seconds,
-                        totalSeconds: positionQueue[0].totalSeconds,
-                        percent:      positionQueue[0].percent,
-                    }
-                );
-                lastPositionReported = positionReported;
-            }
-
-            ring.fillFrom(vtPlayerBuffer.subarray(0, sampleCount));
-            ring.commitFilled()
         }
+        else
+        {
+            positionQueue.push(pos);
+        }
+
+        var i = 0;
+        while (i + 1 < positionQueue.length && !ring.isIndexFilled(positionQueue[i].head))
+        {
+            ++i;
+        }
+        if (i > 0)
+        {
+            positionQueue.splice(0, i);
+        }
+
+        const positionReported =
+        {
+            position: positionQueue[0].position,
+            line:     positionQueue[0].line,
+            seconds:  positionQueue[0].seconds,
+        };
+
+        if (positionReported.position != lastPositionReported.position ||
+            positionReported.line     != lastPositionReported.line     ||
+            positionReported.seconds  != lastPositionReported.seconds)
+        {
+            postMessage(
+                {
+                    position:     positionQueue[0].position,
+                    line:         positionQueue[0].line,
+                    pattern:      positionQueue[0].pattern,
+                    seconds:      positionQueue[0].seconds,
+                    totalSeconds: positionQueue[0].totalSeconds,
+                    percent:      positionQueue[0].percent,
+                }
+            );
+            lastPositionReported = positionReported;
+        }
+
+        ring.fillFrom(vtPlayerBuffer.subarray(0, sampleCount));
+        ring.commitFilled()
+        //await new Promise(resolve => { setTimeout(resolve, 0); });
     }
-    console.log("Main loop exit");
+    //console.log("Main loop exit");
 }
 
 var onmessage = async (event) =>
@@ -188,28 +198,33 @@ var onmessage = async (event) =>
     metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 4);
 
     postMessage(0);
+
+    await mainLoop();
 }
 
 async function processMessage(event)
 {
     console.log('Process message');
-    if ('modBuffer' in event.data)
+
+    if ('modUrl' in event.data)
     {
+        const response = await fetch(event.data.modUrl);
+        console.log('file fetched');
+        const buffer   = await response.arrayBuffer();
+        console.log('buffer obtained');
+
         // TODO: Instead of putting the file in a WASM memory buffer,
         // we should look into putting it in the WASM filesystem.
         // That'd save some precious WASM memory.
-        const buffer         = event.data.modBuffer;
         const modSizeInBytes = buffer.byteLength;
         const modPtr         = malloc(modSizeInBytes);
         (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
+        console.log('buffer copied');
         VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
+        console.log('song loaded');
         free(modPtr);
 
         const pSongData = VTPlayerGetSongData();
         songTotalMilliseconds = VTPlayerModule.HEAPU32[pSongData / 4 + 1];
-
-        const oldCount = sharedCommunicationBuffer.handledWorkerMessage();
-        console.log('Worker handlerd message. Old count was ', oldCount);
-        mainLoop();
     }
 };
