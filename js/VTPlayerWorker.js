@@ -208,7 +208,7 @@ async function processMessage(event)
 
     if ('modUrl' in event.data)
     {
-        const response = await fetch(event.data.modUrl);
+        const response = await fetch(event.data.modUrl, { mode: "cors" });
         console.log('file fetched');
         const buffer   = await response.arrayBuffer();
         console.log('buffer obtained');
