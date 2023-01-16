@@ -1,4 +1,7 @@
-import { SharedCommunication } from "./SharedCommunicationBuffer.js"
+import {
+    SharedCommunication,
+    OutputState,
+} from "./SharedCommunicationBuffer.js"
 
 
 class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
@@ -11,7 +14,7 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
 
     // Initializes upon the event from the worker backend.
     async _initialize(initData) {
-        this._sharedCommunicationBuffer = new SharedCommunication(initData.data.sharedCommunicationBuffer);
+        this._sharedCommunication = new SharedCommunication(initData.data.sharedCommunicationBuffer);
 
         this._isInitialized = true;
         //this.port.postMessage({});
@@ -22,10 +25,20 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
             return true;
         }
 
+        const state = this._sharedCommunication.outputState;
+        switch (state)
+        {
+            case OutputState.Stopped      : return true;
+            case OutputState.Playing      : break;
+            case OutputState.StopRequested:
+                this._sharedCommunication.completeStopOutput();
+                return true;
+        }
+
         // For now this is only mono channel.
         const outputChannelData = outputs[0][0];
 
-        var ring = this._sharedCommunicationBuffer.getRingBufferSnapshot();
+        var ring = this._sharedCommunication.getRingBufferSnapshot();
 
         const filled = ring.ringBufferFilled;
         if (filled < outputChannelData.length)
@@ -37,9 +50,6 @@ class VTPlayerAudioWorkletProcessor extends AudioWorkletProcessor {
         }
 
         ring.emptyTo(outputChannelData);
-
-        this._sharedCommunicationBuffer
-
         ring.commitEmptied();
 
         return true;

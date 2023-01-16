@@ -3,13 +3,23 @@ var vtPlayerWorker;
 
 var sharedCommunication;
 
-var buttonEl;
-var modListEl = document.querySelector('#mod-list');
-var songTimeline = document.querySelector('#songTimeline');;
-var songPositionText = document.querySelector('#songPositionText');;
-var songTimePosition = document.querySelector('#songTimePosition');;
-var songLength = document.querySelector('#songLength');;
+var buttonEl         = document.getElementById('start-button');
+var modListEl        = document.querySelector('#mod-list');
+var songTimeline     = document.querySelector('#songTimeline');
+var songPositionText = document.querySelector('#songPositionText');
+var songTimePosition = document.querySelector('#songTimePosition');
+var songLength       = document.querySelector('#songLength');
+
+
+var playerPreviousButton    = document.querySelector('#playerPreviousButton');
+var playerRewindButton      = document.querySelector('#playerRewindButton');
+var playerPlayStopButton    = document.querySelector('#playerPlayStopButton');
+var playerFastForwardButton = document.querySelector('#playerFastForwardButton');
+var playerNextButton        = document.querySelector('#playerNextButton');
+
 var audioContext;
+
+var paused = true;
 
 const modFiles =
 [
@@ -234,6 +244,8 @@ async function startMod(index)
 {
     if (index < 0)
     {
+        playerPlayStopButton.innerHTML = '&#9654;&#65039;';
+        paused = true;
         return;
     }
 
@@ -254,6 +266,9 @@ async function startMod(index)
         modBuffer: buffer,
     });
     console.log('Worker message posted. New count ', oldCount + 1);
+
+    playerPlayStopButton.innerHTML = '&#9208;&#65039;';
+    paused = false;
 };
 
 window.populateModList = (modListEl) =>
@@ -348,30 +363,49 @@ window.startAudio = async () =>
 
     //await new Promise(resolve => { node.port.onmessage = (event) => { resolve(event); } });
     await isInitialized;
+
+    paused = false;
+    playerPlayStopButton.addEventListener('click', onPauseResume, false);
+    sharedCommunication.requestStartOutput();
+};
+
+async function onStartRandomSong()
+{
+    buttonEl.disabled = true;
+
+    const index = Math.floor(Math.random() * modFiles.length);
+
+    modListElement.value = modFiles[index];
+    await startMod(index);
+    playingRandom = true;
+
+    buttonEl.disabled = false;
+    console.log('Random song: ', modFiles[index]);
+};
+
+async function onPauseResume()
+{
+    if (paused)
+    {
+        await sharedCommunication.requestStartOutput();
+        playerPlayStopButton.innerHTML = '&#9208;&#65039;';
+        paused = false;
+    }
+    else
+    {
+        await sharedCommunication.requestStopOutput();
+        playerPlayStopButton.innerHTML = '&#9654;&#65039;';
+        paused = true;
+    }
 };
 
 window.initialize = async () =>
 {
     populateModList(modListEl);
 
-    const onPlay = async () => {
-        buttonEl.disabled = true;
-
-        const index = Math.floor(Math.random() * modFiles.length);
-    
-        modListElement.value = modFiles[index];
-        startMod(index);
-        playingRandom = true;
-
-        buttonEl.disabled = false;
-        console.log('Random song: ', modFiles[index]);
-    };
-
     // A simple onLoad handler. It also handles user gesture to unlock the audio
     // playback.
     window.addEventListener('load', async () => {
-        buttonEl = document.getElementById('start-button');
-        buttonEl.disabled = false;
-        buttonEl.addEventListener('click', onPlay, false);
+        buttonEl.addEventListener('click', onStartRandomSong, false);
     });
 }

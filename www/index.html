@@ -48,7 +48,7 @@
         grid-row-end: 2;
 
         display: grid;
-        grid-template-rows: 1fr 3em;
+        grid-template-rows: 1fr 5em;
 
         border: 1px solid rgb(0, 0, 0);
         margin: 0px;
@@ -87,6 +87,17 @@
       .songLength {
         float: right;
       }
+      .playerButtons {
+        text-align: center;
+      }
+      .playerButton {
+        font-size: 1.7em;
+        padding: 0px;
+        margin: 0px;
+        border: none;
+        background: none;
+        width: 1.5em;
+      }
     </style>
   </head>
   <body>
@@ -103,13 +114,20 @@
         <div class="helloText">
           <p>Hello! This is JCAB writing, and what you see is a new incarnation of my VTPlayer website.</p>
         </div>
-        <div>
+        <div id="playerControls">
           <div class="songPositionDiv">
             <span class="songTimePosition" id="songTimePosition"></span>
             <span id="songPositionText"><br></span>
             <span class="songLength" id="songLength"></span>
           </div>
           <progress class="songTimeline" id="songTimeline" value="0" max="100"></progress>
+          <div class="playerButtons">
+            <button class="playerButton" id="playerPreviousButton">    &#9198;&#65039; </button>
+            <button class="playerButton" id="playerRewindButton">      &#9194;         </button>
+            <button class="playerButton" id="playerPlayStopButton">    &#9654;&#65039; </button> <!-- &#9208;&#65039; -->
+            <button class="playerButton" id="playerFastForwardButton"> &#9193;         </button>
+            <button class="playerButton" id="playerNextButton">        &#9197;&#65039; </button>
+          </div>
         </div>
       </div>
     </div>

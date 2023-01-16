@@ -1,30 +1,41 @@
 
+// Emscriptem module.
 var VTPlayerModule;
 
+// C++ functions that we call.
 var malloc;
 var free;
-
 var AllocateAudioBuffer;
 var FreeAudioBuffer;
 var VTPlayerLoadSongFromMemory;
 var VTPlayerGetSongData;
 var VTPlayerGetAudio;
 
+// C++ utility buffer to get metadata about the played song.
 var metadataBufferPtr;
 var metadataBuffer;
 
-var sharedBuffer;
+// Sampling rate (samples per second, typically 48000) specified by the audio output.
 var sampleRate;
 
+// All threads are sharing a buffer to communicate with each other.
+// sharedCommunicationBuffer is the object we use to access this communication.
 var sharedCommunicationBuffer;
+
+// Simple queue of position data for samples in the ring buffer.
+// This allows us to have a long buffer, while still showing data to the user
+// that corresponds to the actual audio output.
 var positionQueue = new Array();
 
+// Position data kept around to decide when to add a new entry to the position queue.
+var lastPositionReported = {};
+
+// C++ buffer used to request samples from the player.
 var bufferSizeInFloats;
 var bufferPtr         ;
 var vtPlayerBuffer    ;
 
-var lastPositionReported = {};
-
+// Total lengh of the song.
 var songTotalMilliseconds;
 
 function mainLoop()
@@ -135,49 +146,53 @@ function mainLoop()
     console.log("Main loop exit");
 }
 
+var onmessage = async (event) =>
+{
+    const SharedCommunicationModule = await import("./SharedCommunicationBuffer.js");
+
+    sharedCommunicationBuffer = sharedCommunicationBuffer = new SharedCommunicationModule.SharedCommunication(event.data.sharedCommunicationBuffer);
+    sampleRate = event.data.sampleRate;
+
+    const { default : createVTPlayer } = await import('/js/VTPlayer.js');
+    console.log(createVTPlayer);
+
+    VTPlayerModule = await createVTPlayer();
+    // Unfortunately, Emscriptem replaces our onmessage handler with a new one
+    // that allows the main thread to call C++ functions directly.
+    // Fortunately we don't care. This handler is single-shot initialization, so we just need
+    // to make sure we install our handler after the Emscriptem initialization above.
+    // We don't want the main thread to be calling C++ functions directly,
+    // unless we at some point switch the C++ code itself to use a shared buffer,
+    // which  might eliminate the need for any of this goop.
+    // TODO: Explore Emscriptem's support for pthreads and shared buffer heap.
+    onmessage = processMessage;
+
+    console.log(VTPlayerModule);
+    console.log(Object.keys(VTPlayerModule));
+    console.log(VTPlayerModule._AllocateAudioBuffer);
+
+    // C++ functions that we call.
+    malloc                      = VTPlayerModule._malloc                    ;
+    free                        = VTPlayerModule._free                      ;
+    AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
+    FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
+    VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
+    VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
+    VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
+
+    bufferSizeInFloats = Math.min(sampleRate / 50, sharedCommunicationBuffer.RingSizeInFloats);
+    bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
+    vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
+
+    metadataBufferPtr  = malloc(7 * 4);
+    metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 4);
+
+    postMessage(0);
+}
 
 async function processMessage(event)
 {
     console.log('Process message');
-
-    if ('sharedCommunicationBuffer' in event.data)
-    {
-        const SharedCommunicationModule = await import("./SharedCommunicationBuffer.js");
-
-        sharedCommunicationBuffer = sharedCommunicationBuffer = new SharedCommunicationModule.SharedCommunication(event.data.sharedCommunicationBuffer);
-        sampleRate = event.data.sampleRate;
-
-        const { default : createVTPlayer } = await import('/js/VTPlayer.js');
-        console.log(createVTPlayer);
-
-        VTPlayerModule = await createVTPlayer();
-        // Unfortunately, Emscriptem replaces our onmessage handler, so we need to put it back.
-        // We don't want the main thread to be calling C++ functions directly,
-        // unless we at some point switch the C++ code itself to use a shared buffer.
-        // TODO: Explore Emscriptem's support for pthreads and shared buffers for the heap.
-        onmessage = processMessage;
-
-        console.log(VTPlayerModule);
-        console.log(Object.keys(VTPlayerModule));
-        console.log(VTPlayerModule._AllocateAudioBuffer);
-
-        malloc                      = VTPlayerModule._malloc                    ;
-        free                        = VTPlayerModule._free                      ;
-        AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
-        FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
-        VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
-        VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
-        VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
-
-        bufferSizeInFloats = Math.min(sampleRate / 50, sharedCommunicationBuffer.RingSizeInFloats);
-        bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
-        vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
-
-        metadataBufferPtr  = malloc(7 * 4);
-        metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 4);
-
-        postMessage(0);
-    }
     if ('modBuffer' in event.data)
     {
         // TODO: Instead of putting the file in a WASM memory buffer,
@@ -198,5 +213,3 @@ async function processMessage(event)
         mainLoop();
     }
 };
-
-var onmessage = processMessage;

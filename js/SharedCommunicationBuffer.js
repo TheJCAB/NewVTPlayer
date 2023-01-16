@@ -1,8 +1,17 @@
 
-const RingBufferHead     = 0;
-const RingBufferTail     = 1;
-const WorkerMessageCount = 2;
-const MetaBufferSize     = 3;
+const MetaSlot = Object.freeze({
+    RingBufferHead    : 0,
+    RingBufferTail    : 1,
+    WorkerMessageCount: 2,
+    OutputState       : 3,
+});
+const MetaBufferSize  = 4;
+
+export const OutputState = Object.freeze({
+    Stopped      : 0,
+    Playing      : 1,
+    StopRequested: 2,
+});
 
 export function initializeSharedBuffer(ringSizeInFloats)
 {
@@ -12,9 +21,10 @@ export function initializeSharedBuffer(ringSizeInFloats)
 
     const meta = new Int32Array(buffer, metaPosition, MetaBufferSize);
 
-    meta[RingBufferHead    ] = 0;    // Worker-controlled head
-    meta[RingBufferTail    ] = 0;    // Processor-controlled tail
-    meta[WorkerMessageCount] = 0;    // Posted message count
+    meta[MetaSlot.RingBufferHead    ] = 0;    // Worker-controlled head
+    meta[MetaSlot.RingBufferTail    ] = 0;    // Processor-controlled tail
+    meta[MetaSlot.WorkerMessageCount] = 0;    // Posted message count
+    meta[MetaSlot.OutputState       ] = OutputState.Stopped;
 
     return {
         buffer:           buffer,
@@ -32,59 +42,53 @@ export class SharedCommunication
         this._meta       = new Int32Array(this._bufferData.buffer, this._bufferData.metaPosition, MetaBufferSize);
     }
 
-    postingWorkerMessage()
+    postingWorkerMessage    () { return Atomics.add (this._meta, MetaSlot.WorkerMessageCount, 1); }
+    handledWorkerMessage    () { return Atomics.sub (this._meta, MetaSlot.WorkerMessageCount, 1); }
+    areWorkerMessagesPending() { return Atomics.load(this._meta, MetaSlot.WorkerMessageCount) > 0; }
+
+    get RingSizeInFloats() { return this._ringBuffer.length; }
+
+    getRingBufferSnapshot() { return new RingBufferSnapshot(this); }
+
+    get ringBufferHead()        { return Atomics.load (this._meta, MetaSlot.RingBufferHead); }
+    set ringBufferHead(newHead) { return Atomics.store(this._meta, MetaSlot.RingBufferHead, newHead % this.RingSizeInFloats); }
+
+    get ringBufferTail()        { return Atomics.load (this._meta, MetaSlot.RingBufferTail); }
+    set ringBufferTail(newTail) { return Atomics.store(this._meta, MetaSlot.RingBufferTail, newTail % this.RingSizeInFloats); }
+
+    notifyRingBufferTail()     { return Atomics.notify(this._meta, MetaSlot.RingBufferTail, 1); }
+    waitRingBufferTail  (head) { return Atomics.wait  (this._meta, MetaSlot.RingBufferTail, head); }
+
+    get outputState() { return Atomics.load(this._meta, MetaSlot.OutputState); }
+    async requestStopOutput()
     {
-        return Atomics.add(this._meta, WorkerMessageCount, 1);
+        var state = Atomics.load(this._meta, MetaSlot.OutputState);
+        switch (state)
+        {
+            case OutputState.Stopped:
+                return;
+            case OutputState.Playing:
+                state = Atomics.compareExchange(this._meta, MetaSlot.OutputState, OutputState.Playing, OutputState.StopRequested);
+                if (state == OutputState.Playing)
+                {
+                    state = OutputState.StopRequested;
+                    Atomics.notify(this._meta, MetaSlot.OutputState, 1);
+                }
+                break;
+            case OutputState.StopRequested:
+                break;
+        }
+        await Atomics.waitAsync(this._meta, MetaSlot.OutputState, OutputState.StopRequested);
     }
-
-    handledWorkerMessage()
+    async completeStopOutput()
     {
-        return Atomics.sub(this._meta, WorkerMessageCount, 1);
+        Atomics.store (this._meta, MetaSlot.OutputState, OutputState.Stopped);
+        Atomics.notify(this._meta, MetaSlot.OutputState, 1);
     }
-
-    areWorkerMessagesPending()
+    async requestStartOutput()
     {
-        return Atomics.load(this._meta, WorkerMessageCount) > 0;
-    }
-
-    get RingSizeInFloats()
-    {
-        return this._ringBuffer.length;
-    }
-
-    getRingBufferSnapshot()
-    {
-        return new RingBufferSnapshot(this);
-    }
-
-    get ringBufferHead()
-    { 
-        return Atomics.load(this._meta, RingBufferHead);
-    }
-
-    set ringBufferHead(newHead)
-    { 
-        return Atomics.store(this._meta, RingBufferHead, newHead) % this.RingSizeInFloats;
-    }
-
-    get ringBufferTail()
-    { 
-        return Atomics.load(this._meta, RingBufferTail);
-    }
-
-    set ringBufferTail(newTail)
-    { 
-        return Atomics.store(this._meta, RingBufferTail, newTail) % this.RingSizeInFloats;
-    }
-
-    notifyRingBufferTail()
-    { 
-        return Atomics.notify(this._meta, RingBufferTail, 1);
-    }
-
-    waitRingBufferTail(head)
-    { 
-        return Atomics.wait(this._meta, RingBufferTail, head);
+        Atomics.store (this._meta, MetaSlot.OutputState, OutputState.Playing);
+        Atomics.notify(this._meta, MetaSlot.OutputState, 1);
     }
 }
 
