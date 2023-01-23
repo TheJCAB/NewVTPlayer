@@ -16,38 +16,38 @@ enum class SeekOrigin : uint8_t
 
 constexpr wchar_t c_oemTable[256] =
 {
-    (wchar_t)0x0000,
-    (wchar_t)0x0001,
-    (wchar_t)0x0002,
-    (wchar_t)0x0003,
-    (wchar_t)0x0004,
-    (wchar_t)0x0005,
-    (wchar_t)0x0006,
-    (wchar_t)0x0007,
-    (wchar_t)0x0008,
-    (wchar_t)0x0009,
-    (wchar_t)0x000A,
-    (wchar_t)0x000B,
-    (wchar_t)0x000C,
-    (wchar_t)0x000D,
-    (wchar_t)0x000E,
-    (wchar_t)0x000F,
-    (wchar_t)0x0010,
-    (wchar_t)0x0011,
-    (wchar_t)0x0012,
-    (wchar_t)0x0013,
-    (wchar_t)0x0014,
-    (wchar_t)0x0015,
-    (wchar_t)0x0016,
-    (wchar_t)0x0017,
-    (wchar_t)0x0018,
-    (wchar_t)0x0019,
-    (wchar_t)0x001A,
-    (wchar_t)0x001B,
-    (wchar_t)0x001C,
-    (wchar_t)0x001D,
-    (wchar_t)0x001E,
-    (wchar_t)0x001F,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
+    (wchar_t)0x0020,
     (wchar_t)0x0020,
     (wchar_t)0x0021,
     (wchar_t)0x0022,
@@ -316,6 +316,13 @@ struct IStream
         std::string s(length, ' ');
         static_assert(sizeof(std::byte) == sizeof(char));
         ReadBytes(std::span{ reinterpret_cast<std::byte*>(s.data()), length });
+        for (size_t i = 0; i < length; ++i)
+        {
+            if (s[i] == '\0')
+            {
+                return std::wstring{ s.begin(), s.begin() + i };
+            }
+        }
         return std::wstring{ s.begin(), s.end() };
     }
 
@@ -327,6 +334,11 @@ struct IStream
         ReadBytes(std::span{ reinterpret_cast<std::byte*>(s.data()), length });
         for (size_t i = 0; i < length; ++i)
         {
+            if (s[i] == '\0')
+            {
+                w.resize(i);
+                return w;
+            }
             w[i] = c_oemTable[static_cast<uint8_t>(s[i])];
         }
         return w;

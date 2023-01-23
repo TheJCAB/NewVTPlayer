@@ -8,6 +8,7 @@ var free;
 var AllocateAudioBuffer;
 var FreeAudioBuffer;
 var VTPlayerLoadSongFromMemory;
+var VTPlayerGetSongInfoString;
 var VTPlayerGetSongData;
 var VTPlayerGetAudio;
 
@@ -187,6 +188,7 @@ var onmessage = async (event) =>
     AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
     FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
     VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
+    VTPlayerGetSongInfoString   = VTPlayerModule._VTPlayerGetSongInfoString;
     VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
     VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
 
@@ -226,5 +228,13 @@ async function processMessage(event)
 
         const pSongData = VTPlayerGetSongData();
         songTotalMilliseconds = VTPlayerModule.HEAPU32[pSongData / 4 + 1];
+
+        const pInfo = VTPlayerGetSongInfoString();
+        const info = VTPlayerModule.UTF32ToString(pInfo);
+        postMessage(
+            {
+                songInfo: info,
+            }
+        );
     }
 };

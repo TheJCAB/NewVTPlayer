@@ -88,6 +88,20 @@ extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerLoadSongFromMemory(void const* buff
     playerCurrentSample = 0;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE wchar_t const* VTPlayerGetSongInfoString(/*int* pLength*/)
+{
+    if (song)
+    {
+        //*pLength = static_cast<int>(song->Info.size());
+        return song->Info.c_str();
+    }
+    else
+    {
+        //*pLength = 0;
+        return nullptr;
+    }
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE SongData* VTPlayerGetSongData()
 {
     return &songData;

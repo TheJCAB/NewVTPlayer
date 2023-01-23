@@ -65,7 +65,7 @@
         border: 1px solid rgb(0, 0, 0);
         margin: 0px;
       }
-      .modList {
+      #modList {
         width: 100%;
         height: 100%;
         border: 1px solid rgb(0, 0, 0);
@@ -74,17 +74,20 @@
       .helloText {
         border: 1px solid rgb(0, 0, 0);
       }
+      #infoText {
+        font-family: "Courier New", Courier, monospace;
+      }
       .songPositionDiv {
         text-align: center;
       }
-      .songTimeline {
+      #songTimeline {
         display: block;
         width: 100%;
       }
-      .songTimePosition {
+      #songTimePosition {
         float: left;
       }
-      .songLength {
+      #songLength {
         float: right;
       }
       .playerButtons {
@@ -106,21 +109,22 @@
         <div class="menu">
             <button class="menuButton" id="start-button">Start random song</button><br>
         </div>
-        <div class="modList">
-            <select class="modList" id="mod-list" height="100%" size="5"></select>
+        <div>
+            <select id="modList" height="100%" size="5"></select>
         </div>
       </div>
       <div class="mainPane">
         <div class="helloText">
-          <p>Hello! This is JCAB writing, and what you see is a new incarnation of my VTPlayer website.</p>
+          <p id="introText">Hello! This is JCAB writing, and what you see is a new incarnation of my VTPlayer website.</p>
+          <pre id="infoText"></pre>
         </div>
         <div id="playerControls">
           <div class="songPositionDiv">
-            <span class="songTimePosition" id="songTimePosition"></span>
+            <span id="songTimePosition"></span>
             <span id="songPositionText"><br></span>
-            <span class="songLength" id="songLength"></span>
+            <span id="songLength"></span>
           </div>
-          <progress class="songTimeline" id="songTimeline" value="0" max="100"></progress>
+          <progress id="songTimeline" value="0" max="100"></progress>
           <div class="playerButtons">
             <button class="playerButton" id="playerPreviousButton">    &#9198;&#65039; </button>
             <button class="playerButton" id="playerRewindButton">      &#9194;         </button>

@@ -4,11 +4,12 @@ var vtPlayerWorker;
 var sharedCommunication;
 
 var buttonEl         = document.getElementById('start-button');
-var modListEl        = document.querySelector('#mod-list');
+var modListEl        = document.querySelector('#modList');
 var songTimeline     = document.querySelector('#songTimeline');
 var songPositionText = document.querySelector('#songPositionText');
 var songTimePosition = document.querySelector('#songTimePosition');
 var songLength       = document.querySelector('#songLength');
+var infoText         = document.querySelector('#infoText');
 
 
 var playerPreviousButton    = document.querySelector('#playerPreviousButton');
@@ -339,6 +340,10 @@ window.startAudio = async () =>
                     const secondsLo = Math.floor(event.data.totalSeconds) - minutes * 60 - secondsHi * 10;
                     songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
+            }
+            if ('songInfo' in event.data)
+            {
+                infoText.innerHTML = event.data.songInfo.replaceAll("\n", "<br>");
             }
             if ('songEnded' in event.data)
             {
