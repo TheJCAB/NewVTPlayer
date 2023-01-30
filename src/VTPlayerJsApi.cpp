@@ -11,6 +11,7 @@ uint32_t                                  sampleRate;
 
 std::shared_ptr<VTPlayerLib::ModSong>     song;
 std::vector<VTPlayerLib::ModPositionData> songPositions;
+uint64_t                                  songSamples = 0;
 
 struct SongData
 {
@@ -78,7 +79,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerLoadSongFromMemory(void const* buff
 
     auto const& lastPosition = songPositions.back();
     songData.SongTicks = lastPosition.startTick + lastPosition.numTicks;
-    auto const songSamples = lastPosition.startSample + lastPosition.numSamples;
+    songSamples = lastPosition.startSample + lastPosition.numSamples;
     songData.SongMilliseconds = static_cast<uint32_t>(songSamples * 1000.0 / sampleRate);
 
     player             = MixBufferEngine(song, static_cast<uint32_t>(sampleRate));
@@ -143,4 +144,38 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
     playerFragmentLeft  -= count;
 
     return static_cast<int>(count);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerSetPercent(double percent)
+{
+    auto const targetSample = static_cast<uint64_t>(std::max(songSamples * percent, 0.0));
+    if (targetSample < playerCurrentSample)
+    {
+        // Rewind.
+        player             = MixBufferEngine(song, static_cast<uint32_t>(sampleRate));
+        playerIt           = player.begin();
+        playerFragmentLeft = 0;
+
+        playerCurrentMetadata = GetAudioMetadata{};
+        playerCurrentSample = 0;
+    }
+
+    while (playerIt != player.end())
+    {
+        auto const fragmentEndSample = playerCurrentSample + playerIt->fragment->GetCount();
+        if (fragmentEndSample > targetSample)
+        {
+            playerFragment     = playerIt->fragment;
+            playerFragmentPos  = playerIt->position;
+            playerFragmentLeft = fragmentEndSample < targetSample;
+            playerCurrentMetadata.position    = playerFragmentPos.position.position;
+            playerCurrentMetadata.line        = playerFragmentPos.position.line;
+            playerCurrentMetadata.pattern     = playerFragmentPos.pattern;
+            playerCurrentSample = targetSample;
+            return;
+        }
+
+        playerCurrentSample = fragmentEndSample;
+        ++playerIt;
+    }
 }

@@ -368,6 +368,7 @@ window.startAudio = async () =>
 
     isPaused = false;
     playerPlayStopButton.addEventListener('click', onPauseResume, false);
+    songTimeline.addEventListener('click', onSetPercent , false);
     sharedCommunication.requestStartOutput();
 };
 
@@ -404,6 +405,11 @@ async function pauseAudio()
 async function onPauseResume()
 {
     await isPaused ? resumeAudio() : pauseAudio();
+};
+
+function onSetPercent(event)
+{
+    vtPlayerWorker.postMessage({ setPercent: event.offsetX / songTimeline.offsetWidth });
 };
 
 window.initialize = async () =>

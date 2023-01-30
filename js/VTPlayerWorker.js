@@ -11,6 +11,7 @@ var VTPlayerLoadSongFromMemory;
 var VTPlayerGetSongInfoString;
 var VTPlayerGetSongData;
 var VTPlayerGetAudio;
+var VTPlayerSetPercent;
 
 // C++ utility buffer to get metadata about the played song.
 var metadataBufferPtr;
@@ -188,9 +189,10 @@ var onmessage = async (event) =>
     AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
     FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
     VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
-    VTPlayerGetSongInfoString   = VTPlayerModule._VTPlayerGetSongInfoString;
+    VTPlayerGetSongInfoString   = VTPlayerModule._VTPlayerGetSongInfoString ;
     VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
     VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
+    VTPlayerSetPercent          = VTPlayerModule._VTPlayerSetPercent        ;
 
     bufferSizeInFloats = Math.min(sampleRate / 50, sharedCommunicationBuffer.RingSizeInFloats);
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
@@ -236,5 +238,9 @@ async function processMessage(event)
                 songInfo: info,
             }
         );
+    }
+    if ('setPercent' in event.data)
+    {
+        VTPlayerSetPercent(event.data.setPercent);
     }
 };
