@@ -246,7 +246,7 @@ var modListElement;
 var playingRandom = false;
 var currentIndex = -1;
 
-async function startMod(index)
+async function startMod(index, dontDrain = false)
 {
     if (index < 0)
     {
@@ -264,6 +264,8 @@ async function startMod(index)
 
     vtPlayerWorker.postMessage({
         modUrl: mod.source.modPrefix + mod.urlPath,
+        songId: index,
+        dontDrain: dontDrain,
     });
 
     await resumeAudio();
@@ -300,7 +302,8 @@ window.startAudio = async () =>
 
     console.log(crossOriginIsolated);
 
-    const buffer = SharedCommunicationModule.initializeSharedBuffer(audioContext.sampleRate);
+    // 10 second ring buffer should cover any conceivable glitch?
+    const buffer = SharedCommunicationModule.initializeSharedBuffer(audioContext.sampleRate * 10);
     sharedCommunication = new SharedCommunicationModule.SharedCommunication(buffer);
 
     await audioContext.audioWorklet.addModule('/js/AudioWorklet.js');
@@ -340,6 +343,13 @@ window.startAudio = async () =>
                     const secondsLo = Math.floor(event.data.totalSeconds) - minutes * 60 - secondsHi * 10;
                     songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
+
+                if (modListElement.value != ModFileList[event.data.songId].name)
+                {
+                    // Delayed selection of the module in the list.
+                    // This happens when we started the song without draining the ring buffer.
+                    modListElement.value = ModFileList[event.data.songId].name;
+                }
             }
             if ('songInfo' in event.data)
             {
@@ -357,8 +367,8 @@ window.startAudio = async () =>
                     index = currentIndex + 1;
                 }
 
-                modListElement.value = ModFileList[index].name;
-                startMod(index);
+                // Note: We don't drain the ring buffer in this case. We're just setting up the next song.
+                startMod(index, true);
             }
         }
     }

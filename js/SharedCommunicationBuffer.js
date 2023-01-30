@@ -63,8 +63,18 @@ export class SharedCommunication
     get ringBufferTail()        { return Atomics.load (this._meta, MetaSlot.RingBufferTail); }
     set ringBufferTail(newTail) { return Atomics.store(this._meta, MetaSlot.RingBufferTail, newTail % this.RingSizeInFloats); }
 
+    // Safe update that works correctly even if someone else clears the ring buffer.
+    updateRingBufferTail(oldTail, newTail) { return Atomics.compareExchange(this._meta, MetaSlot.RingBufferTail, oldTail, newTail % this.RingSizeInFloats); }
+
     notifyRingBufferTail()     { return Atomics.notify(this._meta, MetaSlot.RingBufferTail, 1); }
     waitRingBufferTail  (tail) { return this._waitAsyncSlot(MetaSlot.RingBufferTail, tail); }
+
+    // The actor that owns the head can safely clear the ring buffer.
+    clearRingBuffer()
+    {
+        this.ringBufferTail = this.ringBufferHead;
+        this.notifyRingBufferTail();
+    }
 
     get outputState() { return Atomics.load(this._meta, MetaSlot.OutputState); }
     async requestStopOutput()
@@ -104,7 +114,8 @@ export class RingBufferSnapshot
     constructor(sharedCommunication)
     {
         this.head                 = sharedCommunication.ringBufferHead;
-        this.tail                 = sharedCommunication.ringBufferTail;
+        this.oldTail              = sharedCommunication.ringBufferTail;
+        this.tail                 = this.oldTail;
         this.buffer               = sharedCommunication._ringBuffer;
         this.RingSizeInFloats     = sharedCommunication.RingSizeInFloats;
         this._sharedCommunication = sharedCommunication;
@@ -164,7 +175,7 @@ export class RingBufferSnapshot
 
     commitEmptied()
     {
-        this._sharedCommunication.ringBufferTail = this.tail;
+        this._sharedCommunication.updateRingBufferTail(this.oldTail, this.tail);
         this._sharedCommunication.notifyRingBufferTail();
     }
 }

@@ -37,6 +37,9 @@ var bufferSizeInFloats;
 var bufferPtr         ;
 var vtPlayerBuffer    ;
 
+// The song ID allows us to communicate a switch to a new song, delayed via the ring buffer.
+var songId;
+
 // Total lengh of the song.
 var songTotalMilliseconds;
 
@@ -47,7 +50,6 @@ async function mainLoop()
     while (true)
     {
         var ring = sharedCommunicationBuffer.getRingBufferSnapshot();
-
         var available = ring.ringBufferAvailable;
         while (available <= sampleRate / 100)
         {
@@ -89,6 +91,7 @@ async function mainLoop()
         const pos =
         {
             head:         head,
+            songId:       songId,
             position:     metadataBuffer[0],
             line:         metadataBuffer[1],
             pattern:      metadataBuffer[2],
@@ -140,6 +143,7 @@ async function mainLoop()
         {
             postMessage(
                 {
+                    songId:       positionQueue[0].songId,
                     position:     positionQueue[0].position,
                     line:         positionQueue[0].line,
                     pattern:      positionQueue[0].pattern,
@@ -213,7 +217,7 @@ async function processMessage(event)
     if ('modUrl' in event.data)
     {
         const response = await fetch(event.data.modUrl, { mode: "cors" });
-        console.log('file fetched');
+        console.log('file fetched: ', event.data.modUrl);
         const buffer   = await response.arrayBuffer();
         console.log('buffer obtained');
 
@@ -233,14 +237,20 @@ async function processMessage(event)
 
         const pInfo = VTPlayerGetSongInfoString();
         const info = VTPlayerModule.UTF32ToString(pInfo);
+        songId = event.data.songId;
         postMessage(
             {
                 songInfo: info,
             }
         );
+        if (event.data.dontDrain == undefined || !event.data.dontDrain)
+        {
+            sharedCommunicationBuffer.clearRingBuffer();
+        }
     }
     if ('setPercent' in event.data)
     {
         VTPlayerSetPercent(event.data.setPercent);
+        sharedCommunicationBuffer.clearRingBuffer();
     }
 };
