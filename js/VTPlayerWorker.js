@@ -3,8 +3,8 @@
 var VTPlayerModule;
 
 // C++ functions that we call.
-var malloc;
-var free;
+var AllocateMemory;
+var FreeMemory;
 var AllocateAudioBuffer;
 var FreeAudioBuffer;
 var VTPlayerLoadSongFromMemory;
@@ -188,8 +188,8 @@ var onmessage = async (event) =>
     console.log(VTPlayerModule._AllocateAudioBuffer);
 
     // C++ functions that we call.
-    malloc                      = VTPlayerModule._malloc                    ;
-    free                        = VTPlayerModule._free                      ;
+    AllocateMemory              = VTPlayerModule._AllocateMemory            ;
+    FreeMemory                  = VTPlayerModule._FreeMemory                ;
     AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
     FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
     VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
@@ -202,7 +202,7 @@ var onmessage = async (event) =>
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
     vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
 
-    metadataBufferPtr  = malloc(7 * 4);
+    metadataBufferPtr  = AllocateMemory(7 * 4);
     metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 4);
 
     postMessage(0);
@@ -225,12 +225,12 @@ async function processMessage(event)
         // we should look into putting it in the WASM filesystem.
         // That'd save some precious WASM memory.
         const modSizeInBytes = buffer.byteLength;
-        const modPtr         = malloc(modSizeInBytes);
+        const modPtr         = AllocateMemory(modSizeInBytes);
         (new Uint8Array(VTPlayerModule.HEAP8.buffer, modPtr, modSizeInBytes)).set(new Uint8Array(buffer));
         console.log('buffer copied');
         VTPlayerLoadSongFromMemory(modPtr, modSizeInBytes, sampleRate);
         console.log('song loaded');
-        free(modPtr);
+        FreeMemory(modPtr);
 
         const pSongData = VTPlayerGetSongData();
         songTotalMilliseconds = VTPlayerModule.HEAPU32[pSongData / 4 + 1];

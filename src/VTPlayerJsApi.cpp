@@ -40,6 +40,16 @@ struct GetAudioMetadata
 GetAudioMetadata playerCurrentMetadata;
 uint64_t playerCurrentSample = 0;
 
+extern "C" EMSCRIPTEN_KEEPALIVE uint8_t* AllocateMemory(int sizeInBytes)
+{
+    return new uint8_t[sizeInBytes];
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void FreeMemory(uint8_t* buffer)
+{
+    delete[] buffer;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE float* AllocateAudioBuffer(int sizeInFloats)
 {
     return new float[sizeInFloats];

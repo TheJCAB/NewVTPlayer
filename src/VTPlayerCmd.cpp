@@ -237,6 +237,14 @@ T& PickRandom(T (&list)[N], Engine& engine)
     return list[distribution(engine)];
 }
 
+Generator<VTPlayerLib::Fragment> ConvertModToFragmentGenerator(Generator<VTPlayerLib::ModFragment> modGenerator)
+{
+    for (auto&& fragment : modGenerator)
+    {
+        co_yield fragment.fragment;
+    }
+}
+
 int VTPlayerCmd(std::span<std::string_view const> args)
 {
     if (args[1] == "loadlist")
@@ -251,7 +259,7 @@ int VTPlayerCmd(std::span<std::string_view const> args)
             printf("%s\n", songFileName.data());
             VTPlayerLib::Stream s{ fopen((R"(C:\Users\jcab\Music\MODs\)"s + std::string(songFileName)).c_str(), "rb") };
             song = VTPlayerLib::LoadUnknown(s);
-            player = MixBufferEngine(song, 48000u);
+            player = ConvertModToFragmentGenerator(MixBufferEngine(song, 48000u));
             for (auto fragment : player)
             {
                 // Do nothing, just get them all.
@@ -269,7 +277,7 @@ int VTPlayerCmd(std::span<std::string_view const> args)
             VTPlayerLib::Stream s{ fopen((R"(C:\Users\jcab\Music\MODs\)"s + std::string(songFileName)).c_str(), "rb") };
             auto song = VTPlayerLib::LoadUnknown(s);
 
-            VTPlayerLib::PlayAudioSound(MixBufferEngine(song, 48000u));
+            VTPlayerLib::PlayAudioSound(ConvertModToFragmentGenerator(MixBufferEngine(song, 48000u)));
         }
     }
     else if (args[1] == "play")
@@ -277,7 +285,7 @@ int VTPlayerCmd(std::span<std::string_view const> args)
         VTPlayerLib::Stream s{ fopen(args[2].data(), "rb") };
         auto song = VTPlayerLib::LoadUnknown(s);
 
-        VTPlayerLib::PlayAudioSound(MixBufferEngine(song, 48000u));
+        VTPlayerLib::PlayAudioSound(ConvertModToFragmentGenerator(MixBufferEngine(song, 48000u)));
     }
     else if (args[1] == "save")
     {
@@ -286,8 +294,8 @@ int VTPlayerCmd(std::span<std::string_view const> args)
         auto song = VTPlayerLib::LoadUnknown(s);
 
         std::vector<float> buffer;
-
-        for (auto&& fragment : MixBufferEngine(song, 44100u))
+        auto player = ConvertModToFragmentGenerator(MixBufferEngine(song, 44100u));
+        for (auto&& fragment : player)
         {
             auto const offset = buffer.size();
             auto const size = static_cast<size_t>(fragment->GetCount());
