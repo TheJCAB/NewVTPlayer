@@ -245,6 +245,9 @@ var modListElement;
 
 var playingRandom = false;
 var currentIndex = -1;
+var currentPercent = 0;
+var currentSeconds = 0;
+var totalSeconds = 0;
 
 async function startMod(index, dontDrain = false)
 {
@@ -261,6 +264,10 @@ async function startMod(index, dontDrain = false)
     {
         await startAudio();
     }
+
+    currentPercent = 0;
+    currentSeconds = 0;
+    totalSeconds   = 1;
 
     vtPlayerWorker.postMessage({
         modUrl: mod.source.modPrefix + mod.urlPath,
@@ -283,6 +290,7 @@ window.populateModList = (modListEl) =>
 
     modListElement.addEventListener('change', async () =>
         {
+            console.log('List selected: ', modListElement.selectedIndex, " ", modListElement.value);
             await startMod(modListElement.selectedIndex);
             playingRandom = false;
         },
@@ -328,6 +336,10 @@ window.startAudio = async () =>
         {
             if ('position' in event.data)
             {
+                currentPercent = event.data.percent;
+                currentSeconds = event.data.seconds;
+                totalSeconds   = event.data.totalSeconds;
+                
                 //console.log(event.data.position, ' ', event.data.line, ' ', event.data.percent);
                 songTimeline.value = event.data.percent;
                 {
@@ -343,13 +355,12 @@ window.startAudio = async () =>
                     const secondsLo = Math.floor(event.data.totalSeconds) - minutes * 60 - secondsHi * 10;
                     songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
-
-                if (modListElement.value != ModFileList[event.data.songId].name)
-                {
-                    // Delayed selection of the module in the list.
-                    // This happens when we started the song without draining the ring buffer.
-                    modListElement.value = ModFileList[event.data.songId].name;
-                }
+            }
+            if ('startNewSongId' in event.data)
+            {
+                // Delayed selection of the module in the list.
+                // This happens when we started the song without draining the ring buffer.
+                modListElement.value = ModFileList[event.data.startNewSongId].name;
             }
             if ('songInfo' in event.data)
             {
@@ -377,7 +388,11 @@ window.startAudio = async () =>
     await isInitialized;
 
     isPaused = false;
-    playerPlayStopButton.addEventListener('click', onPauseResume, false);
+    playerPreviousButton   .addEventListener('click', onPrevious   , false);
+    playerRewindButton     .addEventListener('click', onRewind     , false);
+    playerPlayStopButton   .addEventListener('click', onPauseResume, false);
+    playerFastForwardButton.addEventListener('click', onFastForward, false);
+    playerNextButton       .addEventListener('click', onNext       , false);
     songTimeline.addEventListener('click', onSetPercent , false);
     sharedCommunication.requestStartOutput();
 };
@@ -412,9 +427,68 @@ async function pauseAudio()
 }
 
 
+async function onPrevious()
+{
+    // If we're "enough" into the song, rewind back to the beginning.
+    if (currentSeconds > 10 || currentPercent >= 0.3)
+    {
+        vtPlayerWorker.postMessage({ setSeconds: 0 });
+        return;
+    }
+
+    // Otherwise, go to the previous song.
+
+    const index = currentIndex - 1;
+    if (index < 0)
+    {
+        index = ModFileList.length;
+    }
+
+    const mod = ModFileList[index];
+
+    modListElement.value = mod.name;
+    await startMod(index);
+};
+
+async function onRewind()
+{
+    var newSeconds = currentSeconds - 10;
+    if (newSeconds < 0)
+    {
+        newSeconds = 0;
+    }
+
+    vtPlayerWorker.postMessage({ setSeconds: newSeconds });
+};
+
 async function onPauseResume()
 {
     await isPaused ? resumeAudio() : pauseAudio();
+};
+
+async function onFastForward()
+{
+    var newSeconds = currentSeconds + 10;
+    if (newSeconds > totalSeconds)
+    {
+        newSeconds = totalSeconds;
+    }
+
+    vtPlayerWorker.postMessage({ setSeconds: newSeconds });
+};
+
+async function onNext()
+{
+    const index = currentIndex + 1;
+    if (index >= ModFileList.length)
+    {
+        index = 0;
+    }
+
+    const mod = ModFileList[index];
+
+    modListElement.value = mod.name;
+    await startMod(index);
 };
 
 function onSetPercent(event)

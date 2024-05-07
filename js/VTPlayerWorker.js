@@ -12,6 +12,7 @@ var VTPlayerGetSongInfoString;
 var VTPlayerGetSongData;
 var VTPlayerGetAudio;
 var VTPlayerSetPercent;
+var VTPlayerSetSeconds;
 
 // C++ utility buffer to get metadata about the played song.
 var metadataBufferPtr;
@@ -47,6 +48,7 @@ async function mainLoop()
 {
     console.log("Main loop");
     var songEnded = true;
+    var currentSongId = -1;
     while (true)
     {
         var ring = sharedCommunicationBuffer.getRingBufferSnapshot();
@@ -137,6 +139,16 @@ async function mainLoop()
             seconds:  positionQueue[0].seconds,
         };
 
+        if (positionQueue[0].songId != currentSongId)
+        {
+            postMessage(
+                {
+                    startNewSongId: positionQueue[0].songId,
+                }
+            );
+            currentSongId = positionQueue[0].songId;
+        }
+
         if (positionReported.position != lastPositionReported.position ||
             positionReported.line     != lastPositionReported.line     ||
             positionReported.seconds  != lastPositionReported.seconds)
@@ -197,6 +209,7 @@ var onmessage = async (event) =>
     VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
     VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
     VTPlayerSetPercent          = VTPlayerModule._VTPlayerSetPercent        ;
+    VTPlayerSetSeconds          = VTPlayerModule._VTPlayerSetSeconds        ;
 
     bufferSizeInFloats = Math.min(sampleRate / 50, sharedCommunicationBuffer.RingSizeInFloats);
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
@@ -251,6 +264,11 @@ async function processMessage(event)
     if ('setPercent' in event.data)
     {
         VTPlayerSetPercent(event.data.setPercent);
+        sharedCommunicationBuffer.clearRingBuffer();
+    }
+    else if ('setSeconds' in event.data)
+    {
+        VTPlayerSetSeconds(event.data.setSeconds);
         sharedCommunicationBuffer.clearRingBuffer();
     }
 };

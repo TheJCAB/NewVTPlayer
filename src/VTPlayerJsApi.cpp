@@ -156,9 +156,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
     return static_cast<int>(count);
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerSetPercent(double percent)
+void SetSample(double targetSample)
 {
-    auto const targetSample = static_cast<uint64_t>(std::max(songSamples * percent, 0.0));
     if (targetSample < playerCurrentSample)
     {
         // Rewind.
@@ -188,4 +187,14 @@ extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerSetPercent(double percent)
         playerCurrentSample = fragmentEndSample;
         ++playerIt;
     }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerSetPercent(double percent)
+{
+    SetSample(static_cast<uint64_t>(std::max(songSamples * percent, 0.0)));
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void VTPlayerSetSeconds(double seconds)
+{
+    SetSample(static_cast<uint64_t>(std::max(songSamples * seconds * 1000 / songData.SongMilliseconds, 0.0)));
 }
