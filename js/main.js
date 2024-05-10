@@ -430,7 +430,7 @@ async function pauseAudio()
 async function onPrevious()
 {
     // If we're "enough" into the song, rewind back to the beginning.
-    if (currentSeconds > 10 || currentPercent >= 0.3)
+    if (currentSeconds > 10 || currentPercent >= 30)
     {
         vtPlayerWorker.postMessage({ setSeconds: 0 });
         return;
