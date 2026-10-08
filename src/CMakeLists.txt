@@ -50,9 +50,16 @@ else()
     add_executable(VTPlayer
         VTPlayerCmd.cpp
 
-        AudioOut.cpp        AudioOut.h
+        AudioOut.h
         WriteWav.h
     )
+
+    if (WIN32)
+        target_sources(VTPlayer PRIVATE AudioOutWin32.cpp)
+    else()
+        target_sources(VTPlayer PRIVATE AudioOutLinux.cpp)
+        target_link_libraries(VTPlayer PRIVATE asound)
+    endif()
 
 endif()
 

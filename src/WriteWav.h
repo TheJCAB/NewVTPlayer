@@ -66,7 +66,7 @@ constexpr std::array<uint8_t, 44> c_wavHeader
 };
 
 inline
-void WriteWavMono(wchar_t const* fileName, std::span<SampleMono> buffer)
+void WriteWavMono(char const* fileName, std::span<SampleMono> buffer)
 {
     std::vector<int16_t> rendered;
     rendered.resize(buffer.size());
@@ -85,7 +85,7 @@ void WriteWavMono(wchar_t const* fileName, std::span<SampleMono> buffer)
     header[42] = (uint8_t)((size >> 16) & 255);
     header[43] = (uint8_t)((size >> 24) & 255);
 
-    if (FILE* const f = _wfopen(fileName, L"wb"))
+    if (FILE* const f = fopen(fileName, "wb"))
     {
         fwrite(header.data(), 1, header.size(), f);
         fwrite(rendered.data(), 2, rendered.size(), f);

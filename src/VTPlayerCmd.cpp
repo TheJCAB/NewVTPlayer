@@ -304,7 +304,11 @@ int VTPlayerCmd(std::span<std::string_view const> args)
         }
 
         // Output the sound in the buffer.
-        VTPlayerLib::WriteWavMono(LR"(C:\TEMP\File.wav)", std::span<float>{buffer.data(), buffer.size()});
+#if _WIN32
+        VTPlayerLib::WriteWavMono(R"(C:\TEMP\File.wav)", std::span<float>{buffer.data(), buffer.size()});
+#else
+        VTPlayerLib::WriteWavMono(R"(~/File.wav)", std::span<float>{buffer.data(), buffer.size()});
+#endif
     }
     else if (args[1] == "positions")
     {
