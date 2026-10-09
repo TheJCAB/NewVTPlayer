@@ -39,10 +39,8 @@ if ("${COMPILER_TOOLCHAIN}" STREQUAL "Emscripten")
             -sENVIRONMENT=worker
             -sBUILD_AS_WORKER
             -sMODULARIZE
-            #-sEXPORT_NAME=kk
-            "-sEXPORTED_RUNTIME_METHODS=['UTF32ToString']"
+            "-sEXPORTED_RUNTIME_METHODS=['UTF32ToString', 'HEAP8', 'HEAPU32']"
             -sEXPORT_ES6
-            #--preload-file "C:/Users/jcab/Music/MODs/MOD/CHECKNOB.MOD@CHECKNOB.MOD"
     )
 
 else()

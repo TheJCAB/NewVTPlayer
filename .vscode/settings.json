@@ -1,7 +1,12 @@
 {
     "liveServer.settings.port": 4500,
+    "liveServer.settings.cors": true,
+    "liveServer.settings.headers": {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+    "liveServer.settings.donotShowInfoMsg": true,
     "liveServer.settings.root": "/www",
-    "liveServer.settings.CustomBrowser": "chrome:PrivateMode",
     "liveServer.settings.ChromeDebuggingAttachment": true,
     "liveServer.settings.NoBrowser" : false,
     "liveServer.settings.ignoreFiles" : [
@@ -12,7 +17,7 @@
     ],
     "liveServer.settings.mount": [
         ["/js", "./js"],
-        ["/js", ".//build/WASM-Debug-EM/bin"]
+        ["/js", "./build/WASM-Debug-EM/bin"]
     ],
     "files.associations": {
         "*.json": "jsonc",

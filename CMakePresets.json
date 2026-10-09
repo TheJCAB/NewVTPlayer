@@ -29,7 +29,7 @@
         { "name": "MSVC"   , "hidden": true, "cacheVariables": { "COMPILER_TOOLCHAIN": "MSVC"      , "CMAKE_CXX_COMPILER": "cl.exe"      , "CMAKE_C_COMPILER": "cl.exe"       }, "toolset": { "value": "host=x64", "strategy": "external" } },
         { "name": "ClangCl", "hidden": true, "cacheVariables": { "COMPILER_TOOLCHAIN": "Clang"     , "CMAKE_CXX_COMPILER": "clang-cl.exe", "CMAKE_C_COMPILER": "clang-cl.exe" }, "toolset": { "value": "host=x64", "strategy": "external" } },
         { "name": "Clang"  , "hidden": true, "cacheVariables": { "COMPILER_TOOLCHAIN": "Clang"     , "CMAKE_CXX_COMPILER": "clang++"     , "CMAKE_C_COMPILER": "clang"        }, "toolset": { "value": "host=x64", "strategy": "external" } },
-        { "name": "EM"     , "hidden": true, "cacheVariables": { "COMPILER_TOOLCHAIN": "Emscripten", "CMAKE_TOOLCHAIN_FILE": "C:/Users/thejc/repos/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake", "CMAKE_CROSSCOMPILING_EMULATOR": "C:/Users/thejc/repos/emsdk/node/14.18.2_64bit/bin/node.exe;--experimental-wasm-bulk-memory;--experimental-wasm-threads" } },
+        { "name": "EM"     , "hidden": true, "cacheVariables": { "COMPILER_TOOLCHAIN": "Emscripten", "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake", "CMAKE_CROSSCOMPILING_EMULATOR": "$env{EMSDK_NODE};--experimental-wasm-bulk-memory;--experimental-wasm-threads" } },
         
         { "name": "x64-Debug-Win32"      , "inherits": [ "base", "x64"  , "Debug"   , "MSVC"    ] },
         { "name": "x64-Debug-ClangCl"    , "inherits": [ "base", "x64"  , "Debug"   , "ClangCl" ] },
