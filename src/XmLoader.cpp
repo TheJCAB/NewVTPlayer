@@ -2,9 +2,11 @@
 #include "stdafx.h"
 #include "Loaders.h"
 #include "Generator.h"
+#include "Player.h"
 
 #include <cmath>
 #include <array>
+#include <format>
 #include <span>
 #include <map>
 
@@ -115,12 +117,14 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
         {
             for (uint32_t row = 0; row < numRows; ++row)
             {
+                std::vector<std::wstring> channelText(song->NumChannels);
                 for (uint32_t channel = 0; channel < song->NumChannels; ++channel)
                 {
                     uint8_t mask = s.ReadType<uint8_t>();
                     uint8_t note;
                     uint8_t effect;
                     uint8_t XY;
+                    uint8_t volume;
 
                     ModSong::GlobalCommand globalCommand{};
                     ModSong::ChannelCommand command{};
@@ -129,7 +133,7 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                     {
                         note = mask;
                         command.Instrument = s.ReadType<uint8_t>();
-                        command.Volume = s.ReadType<uint8_t>();
+                        volume = s.ReadType<uint8_t>();
                         effect = s.ReadType<uint8_t>();
                         XY = s.ReadType<uint8_t>();
                     }
@@ -153,11 +157,11 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                         }
                         if ((mask & 4) != 0)
                         {
-                            command.Volume = s.ReadType<uint8_t>();
+                            volume = s.ReadType<uint8_t>();
                         }
                         else
                         {
-                            command.Volume = 0;
+                            volume = 0;
                         }
                         if ((mask & 8) != 0)
                         {
@@ -177,6 +181,65 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                         }
                     }
 
+                    auto& line = channelText[channel];
+                    if (note == 97)
+                    {
+                        line += L"=== ";
+                    }
+                    else if (note > 97)
+                    {
+                        line += L"^^^ ";
+                    }
+                    else if (note != 0)
+                    {
+                        line += GetNoteName(note);
+                        line += L" ";
+                    }
+                    else
+                    {
+                        line += L"    ";
+                    }
+
+                    if (command.Instrument != 0)
+                    {
+                        line += std::format(L"{:02X} ", command.Instrument);
+                    }
+                    else
+                    {
+                        line += L"   ";
+                    }
+
+                    if (volume >= 0x10 && volume <= 0x50)
+                    {
+                        line += std::format(L"{:02X} ", volume - 0x10);
+                    }
+                    else if (volume >= 0x60)
+                    {
+                        static constexpr wchar_t volumeCommandChars[] = L"v^duhHp<>g";
+                        auto const commandIndex = (volume >> 4) - 6;
+                        line += volumeCommandChars[commandIndex];
+                        line += std::format(L"{:1X} ", volume & 0x0F);
+                    }
+                    else
+                    {
+                        line += L"   ";
+                    }
+
+                    if (effect != 0)
+                    {
+                        line += std::format(L"{:2X} {:02X}", effect, XY);
+                    }
+                    else
+                    {
+                        line += L"     ";
+                    }
+
+                    if (volume >= 0x10 && volume <= 0x50)
+                    {
+                        command.Volume = volume - 0x10;
+                        command.SetVolume = true;
+                    }
+
                     if (note > 96)
                     {
                         // Cut.
@@ -185,16 +248,6 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                     else if (note != 0)
                     {
                         command.Note = note;
-                    }
-
-                    if (command.Volume >= 0x10 && command.Volume <= 0x50)
-                    {
-                        command.SetVolume = true;
-                        command.Volume -= 0x10;
-                    }
-                    else
-                    {
-                        command.Volume = 0;
                     }
 
                     if (effect == 0xA && XY == 0)
@@ -235,6 +288,30 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                         globalCommand.Division = row;
                         globalCommands.push_back(globalCommand);
                     }
+                }
+
+                auto& line = pat.Lines[row];
+                for (auto const& channelLine : channelText)
+                {
+                    if (channelLine.empty())
+                    {
+                        line += L"              ";
+                    }
+                    else
+                    {
+                        line += channelLine;
+                    }
+                    line += L" | ";
+                }
+            }
+        }
+        else
+        {
+            for (auto& line : pat.Lines)
+            {
+                for (uint32_t channel = 0; channel < song->NumChannels; ++channel)
+                {
+                    line += L"              | ";
                 }
             }
         }

@@ -443,7 +443,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     if (note == 254)
                     {
                         command.Note = UINT8_MAX;
-                        line += L"--- ";
+                        line += L"=== ";
                     }
                     else if (note != 255)
                     {

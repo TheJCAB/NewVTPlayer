@@ -3,20 +3,20 @@ var vtPlayerWorker;
 
 var sharedCommunication;
 
-var buttonEl         = document.getElementById('start-button');
-var modListEl        = document.querySelector('#modList');
-var songTimeline     = document.querySelector('#songTimeline');
-var songPositionText = document.querySelector('#songPositionText');
-var songTimePosition = document.querySelector('#songTimePosition');
-var songLength       = document.querySelector('#songLength');
-var infoText         = document.querySelector('#infoText');
+const buttonEl         = document.getElementById('start-button');
+const modListEl        = document.querySelector('#modList');
+const songTimeline     = document.querySelector('#songTimeline');
+const songPositionText = document.querySelector('#songPositionText');
+const songTimePosition = document.querySelector('#songTimePosition');
+const songLength       = document.querySelector('#songLength');
+const infoText         = document.querySelector('#infoText');
 
 
-var playerPreviousButton    = document.querySelector('#playerPreviousButton');
-var playerRewindButton      = document.querySelector('#playerRewindButton');
-var playerPlayStopButton    = document.querySelector('#playerPlayStopButton');
-var playerFastForwardButton = document.querySelector('#playerFastForwardButton');
-var playerNextButton        = document.querySelector('#playerNextButton');
+const playerPreviousButton    = document.querySelector('#playerPreviousButton');
+const playerRewindButton      = document.querySelector('#playerRewindButton');
+const playerPlayStopButton    = document.querySelector('#playerPlayStopButton');
+const playerFastForwardButton = document.querySelector('#playerFastForwardButton');
+const playerNextButton        = document.querySelector('#playerNextButton');
 
 const patternLineList = document.getElementById("patternLineList")
 
@@ -304,6 +304,8 @@ let patternSelectedLine = -1
 
 // Replaces the displayed lines and clears the selection.
 function setPatternLines(lines) {
+    const page = document.getElementById("patternPage")
+    const { scrollLeft, scrollTop } = page
     patternLineList.replaceChildren(...lines.map((text, i) => {
         const div = document.createElement("div")
         div.className = "lineItem"
@@ -312,16 +314,27 @@ function setPatternLines(lines) {
         return div
     }))
     patternSelectedLine = -1
+    page.scrollLeft = scrollLeft
+    page.scrollTop = scrollTop
 }
 
-// Selects a line (-1 clears) and scrolls it into view.
+// Vertical-only scrolling; scrollIntoView would also change horizontal scroll.
+function scrollPatternLineIntoView(item) {
+    const page = document.getElementById("patternPage")
+    const top = item.offsetTop - patternLineList.offsetTop
+    const bottom = top + item.offsetHeight
+    if (top < page.scrollTop) page.scrollTop = top
+    else if (bottom > page.scrollTop + page.clientHeight) page.scrollTop = bottom - page.clientHeight
+}
+
+// Selects a line (-1 clears) and scrolls it into view vertically.
 function selectPatternLine(index) {
     const items = patternLineList.children
     if (items[patternSelectedLine]) items[patternSelectedLine].classList.remove("selected")
     patternSelectedLine = items[index] ? index : -1
     if (patternSelectedLine >= 0) {
         items[patternSelectedLine].classList.add("selected")
-        items[patternSelectedLine].scrollIntoView({ block: "nearest" })
+        scrollPatternLineIntoView(items[patternSelectedLine])
     }
 }
 

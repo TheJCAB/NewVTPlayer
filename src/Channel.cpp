@@ -305,13 +305,16 @@ bool ModChannel::TriggerNote(ModSong::ChannelCommand command)
 
         if (instrument != nullptr)
         {
-            if (sample == nullptr)
+            if (sample == nullptr && !instrument->Samples.empty())
             {
                 ModSong::Instrument::PeriodSamplePair const key{ command.Note, 0 };
                 auto sampleIt = std::lower_bound(instrument->Samples.begin(), instrument->Samples.end(), key);
                 if (sampleIt == instrument->Samples.end() || key < *sampleIt)
                 {
-                    --sampleIt;
+                    if (sampleIt != instrument->Samples.begin())
+                    {
+                        --sampleIt;
+                    }
                 }
                 auto const sampleIndex = sampleIt->Sample;
                 sample = sampleIndex >= m_song->Samples.size() ? nullptr : &m_song->Samples[sampleIndex];
