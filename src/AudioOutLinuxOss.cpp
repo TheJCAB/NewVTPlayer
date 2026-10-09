@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include "AudioOut.h"
 
 #include <sys/soundcard.h>

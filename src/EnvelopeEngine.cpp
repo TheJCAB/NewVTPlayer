@@ -1,6 +1,3 @@
-
-#include "stdafx.h"
-
 #include "Engine.h"
 #include "Generator.h"
 

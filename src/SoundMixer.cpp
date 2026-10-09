@@ -1,9 +1,8 @@
 
-#include "stdafx.h"
-
 #include "SoundMixer.h"
 
 #include <cstdint>
+#include <cassert>
 #include <span>
 
 namespace VTPlayerLib

@@ -1,8 +1,8 @@
-#include "plat.h"
-
 #include "Stream.h"
 #include "Loaders.h"
 #include "Player.h"
+
+#include <emscripten/emscripten.h>
 
 #include <cstdio>
 #include <new>

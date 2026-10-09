@@ -1,28 +1,27 @@
-
-#include "stdafx.h"
 #include "Loaders.h"
 #include "Player.h"
 
 #include <array>
 #include <format>
 #include <map>
+#include <print>
 
 namespace VTPlayerLib
 {
 
-static wchar_t GetEffectChar(uint8_t const effect)
+static char GetEffectChar(uint8_t const effect)
 {
     if (effect == 0)
     {
-        return L' ';
+        return ' ';
     }
-    else if (effect > L'Z' - L'A')
+    else if (effect > 'Z' - 'A')
     {
-        return L'?';
+        return '?';
     }
     else
     {
-        return L'A' + (effect - 1);
+        return 'A' + (effect - 1);
     }
 }
 
@@ -175,9 +174,9 @@ static bool ParseS3MEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& g
         {
             command.SParam = -static_cast<int32_t>(Y);
         }
-        else // X == 0
+        else // XY == 0
         {
-            command.SParam = 0; // TODO: COntinue command?
+            command.SParam = 0; // TODO: Continue command?
         }
         return true;
 
@@ -191,9 +190,9 @@ static bool ParseS3MEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& g
         {
             command.SParam = -static_cast<int32_t>(Y);
         }
-        else // X == 0
+        else // XY == 0
         {
-            command.SParam = 0; // TODO: COntinue command?
+            command.SParam = 0; // TODO: Continue command?
         }
         command.UParam = command.Note == UINT8_MAX ? uint8_t{0} : command.Note;
         command.Note = 0;
@@ -296,9 +295,11 @@ static bool ParseS3MEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& g
         return ParseModEffect(0xF, XY, globalCommand, command);
 
     case 21: // 'U' Fine vibrato
+        // TODO: Implement this.
         return false;
 
     case 22: // 'V' Set global volume
+        // TODO: Implement this.
         return false;
 
     default:
@@ -308,9 +309,6 @@ static bool ParseS3MEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& g
 
 std::shared_ptr<ModSong> LoadS3M(IStream& s)
 {
-    // Debug.Assert(s.CanSeek);
-    // Debug.Assert(s.CanRead);
-
     auto song = std::make_shared<ModSong>();
 
     s.Seek(44, SeekOrigin::Begin);
@@ -319,9 +317,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
 
     song->Title = s.ReadOEMString(28);
 
-    //wprintf(L"Marker: %ls\n", song->Marker.c_str());
-    //wprintf(L"Name: %ls\n", song->Title.c_str());
-
     if (song->Marker != L"SCRM")
     {
         return {};
@@ -329,7 +324,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
 
     s.ReadType<uint8_t>(); // 0x1a
     auto const type = s.ReadType<uint8_t>();
-    //wprintf(L"Type: %u\n", type);
     s.Seek(2, SeekOrigin::Current);
 
     uint32_t const ordNum = s.ReadType<uint16_t>();
@@ -338,13 +332,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
     uint32_t const flags = s.ReadType<uint16_t>();
     uint32_t const cwtv = s.ReadType<uint16_t>();
     uint32_t const ffv = s.ReadType<uint16_t>();
-
-    //wprintf(L"ordNum: %4u\n", ordNum);
-    //wprintf(L"insNum: %4u\n", insNum);
-    //wprintf(L"patNum: %4u\n", patNum);
-    //wprintf(L"flags:  %4X\n", flags);
-    //wprintf(L"cwtv:   %4X\n", cwtv);
-    //wprintf(L"ffv:    %4X\n", ffv);
 
     s.Seek(4, SeekOrigin::Current); // Marker
 
@@ -403,8 +390,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
             song->NumChannels = ch + 1;
         }
     }
-
-    //wprintf(L"NumChannels: %u\n", song->NumChannels);
 
     int patIndex = 0;
     for (auto offset : patternOffsets)
@@ -514,7 +499,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                         ++count;
                         if (count == 1)
                         {
-                            wprintf(L"%3u %2u %2u - Unknown command: %u %1lc %02X\n", patIndex, division, channel & 31, effect, GetEffectChar(effect), XY);
+                            std::println("{:3} {:2} {:2} - Unknown command: {} {} {:02X}", patIndex, division, channel & 31, effect, GetEffectChar(effect), XY);
                         }
                     }
                 }
@@ -580,11 +565,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
         {
             s.Seek(47, SeekOrigin::Current);
             infoString += s.ReadOEMString(28) + L"\n";
-
-            //wprintf(L"Instrument %2u: %-28ls (none)\n",
-            //    static_cast<uint32_t>(song->Samples.size() + 1),
-            //    sample.Name.c_str()
-            //);
         }
         else
         {
@@ -629,16 +609,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     }
                 }
                 auto const sampleLengthWithPad = sampleLength + 1;
-
-                //wprintf(L"Instrument %2u: %-28ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
-                //    static_cast<uint32_t>(song->Samples.size() + 1),
-                //    sampleInfo.c_str(),
-                //    sampleLength,
-                //    sample.FineTune,
-                //    sample.Volume,
-                //    sampleLoopStart,
-                //    sample.LoopLength
-                //);
 
                 s.Seek(soffset, SeekOrigin::Begin);
                 sample.PCM = std::make_shared<std::vector<float>>();

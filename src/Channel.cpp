@@ -1,11 +1,9 @@
-
-#include "stdafx.h"
-
 #include "Channel.h"
 #include "SoundMixer.h"
 
 #include <cassert>
 #include <cmath>
+#include <numbers>
 
 namespace VTPlayerLib
 {
@@ -727,7 +725,7 @@ bool ModChannel::TremoloTick()
 {
     tremoloPosition += tremoloSpeed;
 
-    volumeAdd = static_cast<int32_t>(sin(tremoloPosition * (M_PI / 0x8000'0000u)) * tremoloWidth);
+    volumeAdd = static_cast<int32_t>(sin(tremoloPosition * (std::numbers::pi / 0x8000'0000u)) * tremoloWidth);
 
     return true;
 }

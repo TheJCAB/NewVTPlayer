@@ -1,6 +1,3 @@
-
-#include "stdafx.h"
-
 #include "AudioOut.h"
 
 #include <MmDeviceApi.h>

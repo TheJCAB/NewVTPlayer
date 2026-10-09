@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "Loaders.h"
 #include "Generator.h"
 #include "Player.h"
@@ -7,6 +5,7 @@
 #include <cmath>
 #include <array>
 #include <format>
+#include <print>
 #include <span>
 #include <map>
 
@@ -64,18 +63,6 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
 
     song->periodTargetLo = ModSong::NoteToPeriod(118);
     song->periodTargetHi = ModSong::NoteToPeriod(0);
-
-    //wprintf(L"Tracker:         %ls\n", trackerName.c_str());
-    //wprintf(L"Version:         %X\n", versionNumber);
-    //wprintf(L"Title:           %ls\n", song->Title.c_str());
-    //wprintf(L"NumPositions:    %u\n", numPositions);
-    //wprintf(L"RestartPosition: %u\n", restartPosition);
-    //wprintf(L"NumChannels:     %u\n", song->NumChannels);
-    //wprintf(L"NumPatterns:     %u\n", numPatterns);
-    //wprintf(L"NumInstruments:  %u\n", numInstruments);
-    //wprintf(L"Flags:           %X\n", flags);
-    //wprintf(L"Speed:           %u\n", song->StartTicksPerDivision);
-    //wprintf(L"BPM:             %u\n", song->StartTicksPerMinute);
 
     song->Positions.reserve(numPositions);
     for (uint32_t i = 0; i < numPositions; ++i)
@@ -265,11 +252,11 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                             {
                                 if (effect != 14)
                                 {
-                                    wprintf(L"Unsupported MOD command (%3d, %2d, %2d): %1X (%2X)\n", i, row, channel, effect, XY);
+                                    std::println("Unsupported MOD command ({:3}, {:2}, {:2}): {:2X} ({:02X})", i, row, channel, effect, XY);
                                 }
                                 else
                                 {
-                                    wprintf(L"Unsupported MOD command (%3d, %2d, %2d): %1X%1X (%1X)\n", i, row, channel, effect, XY >> 4, XY & 15);
+                                    std::println("Unsupported MOD command ({:3}, {:2}, {:2}): {:1X}{:1X} ({:1X})", i, row, channel, effect, XY >> 4, XY & 15);
                                 }
                             }
                         }
@@ -352,16 +339,12 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
 
         if (numSamples == 0)
         {
-            //wprintf(L"Instrument %3u: %ls\n", instrumentIndex + 1, instrument.Name.c_str());
-
             song->Instruments.emplace_back();
 
             s.Seek(instrumentPosition + instrumentHdrSize, SeekOrigin::Begin);
         }
         else
         {
-            //wprintf(L"Instrument %3u: %-22ls  Samples:%3u\n", instrumentIndex + 1, instrument.Name.c_str(), numSamples);
-
             auto const sampleHdrSize = s.ReadType<uint32_t>();
 
             auto firstSample = static_cast<uint32_t>(song->Samples.size());
@@ -457,17 +440,6 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
                     sample.LoopLength /= 2;
                 }
 
-                //wprintf(L"Sample %u: %ls\n", firstSample + sampleIndex + 1, sample.Name.c_str());
-                //wprintf(L"Sample Length     : %u\n", sampleLength);
-                //wprintf(L"Sample LoopStart  : %u\n", sampleLoopStart);
-                //wprintf(L"Sample LoopLength : %u\n", sample.LoopLength);
-                //wprintf(L"Sample Volume     : %u\n", sample.Volume);
-                //wprintf(L"Sample Finetune   : %f\n", sample.FineTune);
-                //wprintf(L"Sample Type       : %X\n", sampleType);
-                //wprintf(L"Sample Panning    : %u\n", samplePanning);
-                //wprintf(L"Sample Relnote    : %f\n", sample.Tune);
-                //wprintf(L"Sample Compression: %X\n", sampleCompression);
-
                 if (sampleLength > 0)
                 {
                     s.Seek(sampleDataPosition, SeekOrigin::Begin);
@@ -489,8 +461,7 @@ std::shared_ptr<ModSong> LoadXM(IStream& s)
 
                     if (sampleCompression == 0xAD)
                     {
-                        //throw new NotImplementedException("XM ADPCM samples not yet supported");
-                        wprintf(L"XM ADPCM samples not yet supported\n");
+                        std::println("XM ADPCM samples not yet supported");
                         return {};
                     }
 

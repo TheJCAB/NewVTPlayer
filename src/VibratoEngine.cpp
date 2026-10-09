@@ -1,12 +1,8 @@
-
-#include "stdafx.h"
-
-#define _USE_MATH_DEFINES
-
 #include "Engine.h"
 
 #include <cassert>
 #include <cmath>
+#include <numbers>
 
 namespace VTPlayerLib
 {
@@ -27,7 +23,7 @@ bool VibratoEngine::Tick() noexcept
 {
     m_position += m_speed;
 
-    m_value = (int32_t)(sin((m_position & 0xFFFFFFFF) * (M_PI / 0x80000000)) * m_width);
+    m_value = (int32_t)(sin((m_position & 0xFFFFFFFF) * (std::numbers::pi / 0x80000000)) * m_width);
 
     return true;
 }

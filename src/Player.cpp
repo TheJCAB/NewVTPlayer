@@ -1,6 +1,3 @@
-
-#include "stdafx.h"
-
 #include "Player.h"
 #include "Channel.h"
 
@@ -294,14 +291,9 @@ std::wstring GetNoteName(uint32_t const note)
 //    result += buffer;
 //}
 
-std::wstring RenderPosition([[maybe_unused]] ModSong const& song, [[maybe_unused]] ModPositionData const& modPosition)
+std::wstring RenderPosition(ModSong const& song, ModPositionData const& modPosition)
 {
-    wchar_t buffer[1024]{};
-
-// TODO: std::format.
-//    _snwprintf_s(buffer, _TRUNCATE, L"%03u %03u %02u %02u - %ls", modPosition.position, modPosition.pattern, modPosition.line, modPosition.numTicks, song.Patterns[modPosition.pattern].Lines[modPosition.line].c_str());
-
-    return std::wstring{ buffer };
+    return std::format(L"{:03} {:03} {:02} {:02} - {}", modPosition.position.position, modPosition.pattern, modPosition.position.line, modPosition.numTicks, song.Patterns[modPosition.pattern].Lines[modPosition.position.line].c_str());
 }
 
 //static std::wstring RenderDivision(uint32_t position, uint32_t pattern, uint32_t division, std::span<ModSong::ChannelCommand> commands)

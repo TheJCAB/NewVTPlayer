@@ -1,10 +1,9 @@
-
-#include "stdafx.h"
 #include "Loaders.h"
 #include "Player.h"
 
 #include <format>
 #include <map>
+#include <print>
 
 namespace VTPlayerLib
 {
@@ -14,6 +13,7 @@ bool ParseExtendedModEffect(uint8_t X, uint8_t Y, ModSong::GlobalCommand& global
     switch (X)
     {
     case 0x0:
+        // Amiga filter on/off.
         return false;
 
     case 0x1:
@@ -27,9 +27,12 @@ bool ParseExtendedModEffect(uint8_t X, uint8_t Y, ModSong::GlobalCommand& global
         return false;
 
     case 0x3:
+        // Screw up effect 3?
         return false;
 
     case 0x4:
+        // Vibrato waveform.
+        // TODO: Implement this.
         return false;
 
     case 0x5:
@@ -45,15 +48,22 @@ bool ParseExtendedModEffect(uint8_t X, uint8_t Y, ModSong::GlobalCommand& global
         return true;
 
     case 0x6:
+        // Loopback.
+        // TODO: Implement this.
         return false;
 
     case 0x7:
+        // Tremolo waveform.
+        // TODO: Implement this.
         return false;
 
     case 0x8:
+        // Panning extension (?).
         return false;
 
     case 0x9:
+        // Protracker retrigger. Note: it is different from the ScreamTracker retrigger.
+        // TODO: Implement this.
         return false;
 
     case 0xA:
@@ -198,6 +208,7 @@ bool ParseModEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& globalCo
         return true;
 
     case 0x8:
+        // Panning extension.
         return false;
 
     case 0x9:
@@ -260,7 +271,8 @@ bool ParseModEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& globalCo
         }
         else
         {
-            return false;
+            // Zero parameter. Just ignore.
+            return true;
         }
     }
 
@@ -269,9 +281,6 @@ bool ParseModEffect(uint8_t effect, uint8_t XY, ModSong::GlobalCommand& globalCo
 
 std::shared_ptr<ModSong> LoadMod(IStream& s)
 {
-    // Debug.Assert(s.CanSeek);
-    // Debug.Assert(s.CanRead);
-
     auto song = std::make_shared<ModSong>();
 
     s.Seek(20 + 30 * 31 + 130, SeekOrigin::Begin);
@@ -279,9 +288,6 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
     s.Seek(0, SeekOrigin::Begin);
 
     song->Title = s.ReadOEMString(20);
-
-    //wprintf(L"Marker: %ls\n", song->Marker.c_str());
-    //wprintf(L"Name: %ls\n", song->Title.c_str());
 
     uint16_t numSamples = 0;
     uint16_t numChannels = 0;
@@ -336,31 +342,20 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
     uint32_t numPositions = s.ReadType<uint8_t>();
     uint32_t repeat = s.ReadType<uint8_t>();
 
-    //wprintf(L"Positions: %u\n", numPositions);
-    //wprintf(L"127 repeat: %u\n", repeat);
-
     uint32_t numPatterns = 0;
 
-    //auto sb = new StringBuilder();
-    //sb.Append("Positions: ");
     for (uint32_t i = 1; i <= 128; ++i)
     {
-        // auto dataPositiona = s.Position();
         uint32_t pat = s.ReadType<uint8_t>();
-        // auto dataPositionb = s.Position();
-        // TODO: DEBUG if (dataPositionb != dataPositiona + 1) __debugbreak();
         if (numPatterns <= pat)
         {
             numPatterns = pat + 1;
         }
         if (i <= numPositions)
         {
-            //sb.Append(" " + pat);
-
             song->Positions.push_back(pat);
         }
     }
-    //Debug.WriteLine(sb);
 
     if (numSamples == 31)
     {
@@ -402,11 +397,6 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                 else
                 {
                     command.Note = (uint8_t)ModSong::PeriodToNote(period * 256);
-
-                    //for (uint32_t n = 38; n < 66; ++n)
-                    //{
-                    //    Debug.WriteLine("{0} - {1:000.0}", n, ModSong.NoteToPeriod(n) / 256.0);
-                    //}
 
                     assert(ModSong::PeriodToNote(ModSong::NoteToPeriod(command.Note)) == command.Note);
                 }
@@ -451,11 +441,11 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                     {
                         if (effect != 14)
                         {
-                            wprintf(L"Unsupported MOD command (%3d, %2d, %2d): %1X (%2X)\n", i, division, channel, effect, XY);
+                            std::println("Unsupported MOD command ({:3}, {:2}, {:2}): {:1X} ({:2X})", i, division, channel, effect, XY);
                         }
                         else
                         {
-                            wprintf(L"Unsupported MOD command (%3d, %2d, %2d): %1X%1X (%1X)\n", i, division, channel, effect, XY >> 4, XY & 15);
+                            std::println("Unsupported MOD command ({:3}, {:2}, {:2}): {:1X}{:1X} ({:1X})\n", i, division, channel, effect, XY >> 4, XY & 15);
                         }
                     }
                 }
@@ -522,16 +512,6 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                     sample.FineTune = (float)pow(2, -(1 / 96.0) * (((int)finetune & 15) - 16));
                 }
 
-                //wprintf(L"Instrument %2u: %-22ls, Length:%6u, Finetune:%4.2f, Volume:%2u, Loop:%6u,%6u\n",
-                //    sampleIndex + 1,
-                //    sample.Name.c_str(),
-                //    length,
-                //    sample.FineTune,
-                //    sample.Volume,
-                //    loopStart,
-                //    sample.LoopLength
-                //);
-
                 s.Seek(dataPosition, SeekOrigin::Begin);
 
                 auto lengthUsed = length;
@@ -574,11 +554,6 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
             }
             else
             {
-                //wprintf(L"Instrument %2u: %-22ls (none)\n",
-                //    sampleIndex + 1,
-                //    name.c_str()
-                //);
-
                 song->Samples.push_back({});
             }
 

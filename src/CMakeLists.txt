@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
 add_library(VTPlayerLib STATIC
-    stdafx.h # TODO: Remove
     Song.h
     Stream.h
     targetver.h
@@ -23,12 +22,13 @@ add_library(VTPlayerLib STATIC
     XmLoader.cpp
 )
 
+# We use "unsafe" but standard fopen, so silence warnings on Windows.
+target_compile_definitions(VTPlayerLib PUBLIC _CRT_SECURE_NO_WARNINGS)
+
 if ("${COMPILER_TOOLCHAIN}" STREQUAL "Emscripten")
 
     add_executable(VTPlayer
         VTPlayerJsApi.cpp
-
-        plat.h
     )
 
     target_link_options(VTPlayer
