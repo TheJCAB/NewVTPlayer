@@ -3,8 +3,8 @@
 
 #include "Player.h"
 #include "Channel.h"
-#include "StringUtils.h"
 
+#include <format>
 #include <set>
 
 namespace VTPlayerLib
@@ -94,11 +94,12 @@ Generator<ModPositionData> ModPositionEnumerator(ModSong const& song, uint32_t s
                     .position    = position,
                     .line        = division,
                 },
-                .pattern     = pattern,
-                .startTick   = totalTicks,
-                .startSample = totalSamples,
-                .numTicks    = ticks,
-                .numSamples  = sampleCount,
+                .pattern       = pattern,
+                .patternLength = patternData.Length,
+                .startTick     = totalTicks,
+                .startSample   = totalSamples,
+                .numTicks      = ticks,
+                .numSamples    = sampleCount,
             };
 
             if (visited.find(modPosition) != visited.end())
@@ -250,7 +251,7 @@ static constexpr wchar_t const* NoteList[12]
 
 std::wstring GetNoteName(uint32_t const note)
 {
-    return StdWStringPrintf(L"%ls%1u", NoteList[note % 12], note / 12);
+    return std::format(L"{}{}", NoteList[note % 12], note / 12);
 }
 
 //static std::wstring RenderCommand(ModSong::ChannelCommand const& command)

@@ -9,6 +9,7 @@ var AllocateAudioBuffer;
 var FreeAudioBuffer;
 var VTPlayerLoadSongFromMemory;
 var VTPlayerGetSongInfoString;
+var VTPlayerGetPatternRowString;
 var VTPlayerGetSongData;
 var VTPlayerGetAudio;
 var VTPlayerSetPercent;
@@ -32,6 +33,9 @@ var positionQueue = new Array();
 
 // Position data kept around to decide when to add a new entry to the position queue.
 var lastPositionReported = {};
+
+// Position data kept around to decide when to add a new entry to the position queue.
+var lastPatternReported = {};
 
 // C++ buffer used to request samples from the player.
 var bufferSizeInFloats;
@@ -66,7 +70,8 @@ async function mainLoop()
         //    metadataBuffer[0], ' ', // position
         //    metadataBuffer[1], ' ', // line
         //    metadataBuffer[2], ' ', // pattern
-        //    metadataBuffer[3], ' ', // millisecond
+        //    metadataBuffer[3], ' ', // pattern length
+        //    metadataBuffer[4], ' ', // millisecond
         //);
 
         if (sampleCount == 0)
@@ -92,14 +97,15 @@ async function mainLoop()
 
         const pos =
         {
-            head:         head,
-            songId:       songId,
-            position:     metadataBuffer[0],
-            line:         metadataBuffer[1],
-            pattern:      metadataBuffer[2],
-            seconds:      Math.trunc(metadataBuffer[3] / 1000),
-            totalSeconds: Math.trunc(songTotalMilliseconds / 1000),
-            percent:      metadataBuffer[3] * 100.0 / songTotalMilliseconds,
+            head:          head,
+            songId:        songId,
+            position:      metadataBuffer[0],
+            line:          metadataBuffer[1],
+            pattern:       metadataBuffer[2],
+            patternLength: metadataBuffer[3],
+            seconds:       Math.trunc(metadataBuffer[4] / 1000),
+            totalSeconds:  Math.trunc(songTotalMilliseconds / 1000),
+            percent:       metadataBuffer[4] * 100.0 / songTotalMilliseconds,
         };
 
         if (positionQueue.length > 0)
@@ -134,9 +140,17 @@ async function mainLoop()
 
         const positionReported =
         {
-            position: positionQueue[0].position,
-            line:     positionQueue[0].line,
-            seconds:  positionQueue[0].seconds,
+            position:      positionQueue[0].position,
+            line:          positionQueue[0].line,
+            pattern:       positionQueue[0].pattern,
+            patternLength: positionQueue[0].patternLength,
+            seconds:       positionQueue[0].seconds,
+        };
+
+        const patternReported =
+        {
+            pattern:       positionQueue[0].pattern,
+            patternLength: positionQueue[0].patternLength,
         };
 
         if (positionQueue[0].songId != currentSongId)
@@ -149,6 +163,22 @@ async function mainLoop()
             currentSongId = positionQueue[0].songId;
         }
 
+        if (patternReported.pattern != lastPatternReported.pattern)
+        {
+            
+            postMessage(
+                {
+                    newPattern:       positionQueue[0].pattern,
+                    newPatternLength: positionQueue[0].patternLength,
+                    newPatternLines:  Array.from({ length: positionQueue[0].patternLength }, (_, i) => {
+                        const ptr = VTPlayerGetPatternRowString(positionQueue[0].pattern, i)
+                        return VTPlayerModule.UTF32ToString(ptr)
+                    })
+                }
+            );
+            lastPatternReported = patternReported;
+        }
+
         if (positionReported.position != lastPositionReported.position ||
             positionReported.line     != lastPositionReported.line     ||
             positionReported.seconds  != lastPositionReported.seconds)
@@ -159,6 +189,7 @@ async function mainLoop()
                     position:     positionQueue[0].position,
                     line:         positionQueue[0].line,
                     pattern:      positionQueue[0].pattern,
+                    patternLength:positionQueue[0].patternLength,
                     seconds:      positionQueue[0].seconds,
                     totalSeconds: positionQueue[0].totalSeconds,
                     percent:      positionQueue[0].percent,
@@ -200,23 +231,24 @@ var onmessage = async (event) =>
     console.log(VTPlayerModule._AllocateAudioBuffer);
 
     // C++ functions that we call.
-    AllocateMemory              = VTPlayerModule._AllocateMemory            ;
-    FreeMemory                  = VTPlayerModule._FreeMemory                ;
-    AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer       ;
-    FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer           ;
-    VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory;
-    VTPlayerGetSongInfoString   = VTPlayerModule._VTPlayerGetSongInfoString ;
-    VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData       ;
-    VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio          ;
-    VTPlayerSetPercent          = VTPlayerModule._VTPlayerSetPercent        ;
-    VTPlayerSetSeconds          = VTPlayerModule._VTPlayerSetSeconds        ;
+    AllocateMemory              = VTPlayerModule._AllocateMemory             ;
+    FreeMemory                  = VTPlayerModule._FreeMemory                 ;
+    AllocateAudioBuffer         = VTPlayerModule._AllocateAudioBuffer        ;
+    FreeAudioBuffer             = VTPlayerModule._FreeAudioBuffer            ;
+    VTPlayerLoadSongFromMemory  = VTPlayerModule._VTPlayerLoadSongFromMemory ;
+    VTPlayerGetSongInfoString   = VTPlayerModule._VTPlayerGetSongInfoString  ;
+    VTPlayerGetPatternRowString = VTPlayerModule._VTPlayerGetPatternRowString;
+    VTPlayerGetSongData         = VTPlayerModule._VTPlayerGetSongData        ;
+    VTPlayerGetAudio            = VTPlayerModule._VTPlayerGetAudio           ;
+    VTPlayerSetPercent          = VTPlayerModule._VTPlayerSetPercent         ;
+    VTPlayerSetSeconds          = VTPlayerModule._VTPlayerSetSeconds         ;
 
     bufferSizeInFloats = Math.min(sampleRate / 50, sharedCommunicationBuffer.RingSizeInFloats);
     bufferPtr          = AllocateAudioBuffer(bufferSizeInFloats);
     vtPlayerBuffer     = new Float32Array(VTPlayerModule.HEAP8.buffer, bufferPtr, bufferSizeInFloats);
 
-    metadataBufferPtr  = AllocateMemory(7 * 4);
-    metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 4);
+    metadataBufferPtr  = AllocateMemory(5 * 4);
+    metadataBuffer     = new Uint32Array(VTPlayerModule.HEAP8.buffer, metadataBufferPtr, 5);
 
     postMessage(0);
 

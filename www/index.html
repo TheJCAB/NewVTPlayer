@@ -48,7 +48,7 @@
         grid-row-end: 2;
 
         display: grid;
-        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-rows: auto minmax(0, 1fr) auto;
         min-height: 0;
 
         border: 1px solid rgb(0, 0, 0);
@@ -71,6 +71,40 @@
         height: 100%;
         border: 1px solid rgb(0, 0, 0);
         margin: 0px;
+      }
+      .tabBar {
+        display: flex;
+        border: 1px solid rgb(0, 0, 0);
+      }
+      .tabButton {
+        padding: 0.3em 1em;
+        border: none;
+        border-right: 1px solid rgb(0, 0, 0);
+        background: rgb(224, 224, 224);
+        cursor: pointer;
+      }
+      .tabButton.active {
+        background: rgb(255, 255, 255);
+        font-weight: bold;
+      }
+      .tabPage {
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .tabPage[hidden] {
+        display: none;
+      }
+      #patternLineList {
+        font-family: "Courier New", Courier, monospace;
+      }
+      .lineItem {
+        white-space: pre;
+        padding: 0px 0.5em;
+        cursor: pointer;
+      }
+      .lineItem.selected {
+        background: rgb(48, 96, 192);
+        color: rgb(255, 255, 255);
       }
       .helloText {
         border: 1px solid rgb(0, 0, 0);
@@ -117,9 +151,16 @@
         </div>
       </div>
       <div class="mainPane">
-        <div class="helloText">
+        <div class="tabBar">
+          <button class="tabButton active" data-tab="helloPage">Info</button>
+          <button class="tabButton" data-tab="patternPage">Lines</button>
+        </div>
+        <div class="helloText tabPage" id="helloPage">
           <p id="introText">Hello! This is JCAB writing, and what you see is a new incarnation of my VTPlayer website.</p>
           <pre id="infoText"></pre>
+        </div>
+        <div class="tabPage" id="patternPage" hidden>
+          <div id="patternLineList"></div>
         </div>
         <div id="playerControls">
           <div class="songPositionDiv">
@@ -142,6 +183,18 @@
     <script src="js/main.js" type="application/javascript"></script>
 
     <script>
+      for (const button of document.querySelectorAll(".tabButton")) {
+        button.addEventListener("click", () => {
+          for (const b of document.querySelectorAll(".tabButton"))
+            b.classList.toggle("active", b === button)
+          for (const page of document.querySelectorAll(".tabPage"))
+            page.hidden = page.id !== button.dataset.tab
+        })
+      }
+
+      setPatternLines(Array.from({ length: 40 }, (_, i) => `Placeholder line ${i + 1}`))
+      selectPatternLine(0)
+
       initialize()
     </script>
   </body>

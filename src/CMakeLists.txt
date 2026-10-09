@@ -4,7 +4,6 @@ add_library(VTPlayerLib STATIC
     stdafx.h # TODO: Remove
     Song.h
     Stream.h
-    StringUtils.h
     targetver.h
     Timeline.h
 

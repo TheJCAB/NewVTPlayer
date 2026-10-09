@@ -1,9 +1,9 @@
 
 #include "stdafx.h"
 #include "Loaders.h"
-#include "StringUtils.h"
 #include "Player.h"
 
+#include <format>
 #include <map>
 
 namespace VTPlayerLib
@@ -388,10 +388,6 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                 uint8_t p3 = s.ReadType<uint8_t>();
 
                 auto& line = pat.Lines[division];
-                if (channel > 0)
-                {
-                    line += L" | ";
-                }
 
                 ModSong::ChannelCommand command{};
                 ModSong::GlobalCommand globalCommand{};
@@ -433,7 +429,7 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                 }
                 else
                 {
-                    line += StdWStringPrintf(L"%2u ", command.Instrument).c_str();
+                    line += std::format(L"{:2} ", command.Instrument).c_str();
                 }
                 if (effect == 0)
                 {
@@ -441,8 +437,10 @@ std::shared_ptr<ModSong> LoadMod(IStream& s)
                 }
                 else
                 {
-                    line += StdWStringPrintf(L"%1X %2X", effect, XY).c_str();
+                    line += std::format(L"{:1X} {:2X}", effect, XY).c_str();
                 }
+
+                line += L" | ";
 
                 if (!ParseModEffect(effect, XY, globalCommand, command))
                 {

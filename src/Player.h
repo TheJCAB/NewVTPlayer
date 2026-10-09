@@ -20,11 +20,12 @@ struct ModPosition
 struct ModPositionData
 {
     ModPosition position;
-    uint32_t    pattern     = 0;
-    uint32_t    startTick   = 0;
-    uint64_t    startSample = 0;
-    uint32_t    numTicks    = 0;
-    uint32_t    numSamples  = 0;
+    uint32_t    pattern       = 0;
+    uint32_t    patternLength = 0;
+    uint32_t    startTick     = 0;
+    uint64_t    startSample   = 0;
+    uint32_t    numTicks      = 0;
+    uint32_t    numSamples    = 0;
 
     friend bool operator<(ModPositionData const& a, ModPositionData const& b) noexcept { return a.position < b.position; }
 };

@@ -18,6 +18,8 @@ var playerPlayStopButton    = document.querySelector('#playerPlayStopButton');
 var playerFastForwardButton = document.querySelector('#playerFastForwardButton');
 var playerNextButton        = document.querySelector('#playerNextButton');
 
+const patternLineList = document.getElementById("patternLineList")
+
 var audioContext;
 
 var isPaused = true;
@@ -298,6 +300,32 @@ window.populateModList = (modListEl) =>
     );
 };
 
+let patternSelectedLine = -1
+
+// Replaces the displayed lines and clears the selection.
+function setPatternLines(lines) {
+    patternLineList.replaceChildren(...lines.map((text, i) => {
+        const div = document.createElement("div")
+        div.className = "lineItem"
+        div.textContent = text
+        div.addEventListener("click", () => selectPatternLine(i))
+        return div
+    }))
+    patternSelectedLine = -1
+}
+
+// Selects a line (-1 clears) and scrolls it into view.
+function selectPatternLine(index) {
+    const items = patternLineList.children
+    if (items[patternSelectedLine]) items[patternSelectedLine].classList.remove("selected")
+    patternSelectedLine = items[index] ? index : -1
+    if (patternSelectedLine >= 0) {
+        items[patternSelectedLine].classList.add("selected")
+        items[patternSelectedLine].scrollIntoView({ block: "nearest" })
+    }
+}
+
+
 window.startAudio = async () =>
 {
     if (audioContext == undefined)
@@ -334,6 +362,12 @@ window.startAudio = async () =>
         resolveIsInitialized(event);
         vtPlayerWorker.onmessage = (event) =>
         {
+            // Must run before the position update, which selects a line in the new pattern.
+            if ('newPattern' in event.data)
+            {
+                setPatternLines(event.data.newPatternLines)
+                selectPatternLine(0)
+            }
             if ('position' in event.data)
             {
                 currentPercent = event.data.percent;
@@ -348,13 +382,14 @@ window.startAudio = async () =>
                     const secondsLo = Math.floor(event.data.seconds) - minutes * 60 - secondsHi * 10;
                     songTimePosition.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
-                songPositionText.textContent = `${event.data.position}(${event.data.pattern})/${event.data.line}`;
+                songPositionText.textContent = `${event.data.position}(${event.data.pattern}).${event.data.line}/${event.data.patternLength}`;
                 {
                     const minutes = Math.floor(event.data.totalSeconds / 60);
                     const secondsHi = Math.floor(event.data.totalSeconds / 10) - minutes * 6;
                     const secondsLo = Math.floor(event.data.totalSeconds) - minutes * 60 - secondsHi * 10;
                     songLength.textContent = `${minutes}:${secondsHi}${secondsLo}`;
                 }
+                selectPatternLine(event.data.line)
             }
             if ('startNewSongId' in event.data)
             {

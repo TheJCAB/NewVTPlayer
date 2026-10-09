@@ -1,10 +1,10 @@
 
 #include "stdafx.h"
 #include "Loaders.h"
-#include "StringUtils.h"
 #include "Player.h"
 
 #include <array>
+#include <format>
 #include <map>
 
 namespace VTPlayerLib
@@ -467,7 +467,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     }
                     else
                     {
-                        line += StdWStringPrintf(L"%2u ", command.Instrument).c_str();
+                        line += std::format(L"{:2} ", command.Instrument).c_str();
                     }
                 }
                 else
@@ -482,7 +482,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                         command.SetVolume = true;
                         command.Volume = volume;
 
-                        line += StdWStringPrintf(L"%2X ", volume).c_str();
+                        line += std::format(L"{:2X} ", volume).c_str();
                     }
                     else
                     {
@@ -504,7 +504,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                     }
                     else
                     {
-                        line += StdWStringPrintf(L"%1lc %2X", GetEffectChar(effect), XY).c_str();
+                        line += std::format(L"{:1} {:2X}", GetEffectChar(effect), XY).c_str();
                     }
 
                     if (!ParseS3MEffect(effect, XY, globalCommand, command))
@@ -546,10 +546,6 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
             auto& line = pat.Lines[division];
             for (uint32_t i = 0; i < song->NumChannels; ++i)
             {
-                if (i > 0)
-                {
-                    line += L" | ";
-                }
                 if (channelText[i].empty())
                 {
                     line += L"              ";
@@ -558,6 +554,7 @@ std::shared_ptr<ModSong> LoadS3M(IStream& s)
                 {
                     line += channelText[i];
                 }
+                line += L" | ";
             }
         }
 

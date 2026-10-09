@@ -29,10 +29,11 @@ uint64_t playerFragmentLeft = 0;
 
 struct GetAudioMetadata
 {
-    uint32_t position    = UINT32_MAX;
-    uint32_t line        = UINT32_MAX;
-    uint32_t pattern     = UINT32_MAX;
-    uint32_t millisecond = UINT32_MAX;
+    uint32_t position      = UINT32_MAX;
+    uint32_t line          = UINT32_MAX;
+    uint32_t pattern       = UINT32_MAX;
+    uint32_t patternLength = UINT32_MAX;
+    uint32_t millisecond   = UINT32_MAX;
 
     friend bool operator==(GetAudioMetadata, GetAudioMetadata) = default;
 };
@@ -113,6 +114,22 @@ extern "C" EMSCRIPTEN_KEEPALIVE wchar_t const* VTPlayerGetSongInfoString(/*int* 
     }
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE wchar_t const* VTPlayerGetPatternRowString(unsigned int patternId, unsigned int rowIndex)
+{
+    if (!song || patternId >= song->Patterns.size())
+    {
+        return nullptr;
+    }
+
+    auto& pattern = song->Patterns[patternId];
+    if (rowIndex >= pattern.Lines.size())
+    {
+        return nullptr;
+    }
+
+    return pattern.Lines[rowIndex].c_str();
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE SongData* VTPlayerGetSongData()
 {
     return &songData;
@@ -135,9 +152,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int VTPlayerGetAudio(float* buffer, int sizeInFl
         playerFragment     = playerIt->fragment;
         playerFragmentPos  = playerIt->position;
         playerFragmentLeft = playerFragment->GetCount();
-        playerCurrentMetadata.position    = playerFragmentPos.position.position;
-        playerCurrentMetadata.line        = playerFragmentPos.position.line;
-        playerCurrentMetadata.pattern     = playerFragmentPos.pattern;
+        playerCurrentMetadata.position      = playerFragmentPos.position.position;
+        playerCurrentMetadata.line          = playerFragmentPos.position.line;
+        playerCurrentMetadata.pattern       = playerFragmentPos.pattern;
+        playerCurrentMetadata.patternLength = playerFragmentPos.patternLength;
         playerCurrentSample = playerFragmentPos.startSample;
         playerIt++;
     }
@@ -177,9 +195,10 @@ void SetSample(double targetSample)
             playerFragment     = playerIt->fragment;
             playerFragmentPos  = playerIt->position;
             playerFragmentLeft = fragmentEndSample < targetSample;
-            playerCurrentMetadata.position    = playerFragmentPos.position.position;
-            playerCurrentMetadata.line        = playerFragmentPos.position.line;
-            playerCurrentMetadata.pattern     = playerFragmentPos.pattern;
+            playerCurrentMetadata.position      = playerFragmentPos.position.position;
+            playerCurrentMetadata.line          = playerFragmentPos.position.line;
+            playerCurrentMetadata.pattern       = playerFragmentPos.pattern;
+            playerCurrentMetadata.patternLength = playerFragmentPos.patternLength;
             playerCurrentSample = targetSample;
             return;
         }
